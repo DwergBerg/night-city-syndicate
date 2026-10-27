@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Night City Syndicate</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation}
 :root{
   --pink:#ff2a6d; --cyan:#05d9e8; --yellow:#ffe600; --red:#ff3131; --purple:#b967ff;
   --bg:#05060f; --panel:rgba(7,8,18,.94); --line:#1f2340; --txt:#e8eaf6; --dim:#8b91b5; --faint:#6b7194;
@@ -15,6 +15,7 @@ body{
   background:var(--bg); color:var(--txt); overflow:hidden;
   font-family:'Courier New',Consolas,Menlo,monospace;
   -webkit-user-select:none; user-select:none;
+  -webkit-tap-highlight-color:transparent;
 }
 #city{position:fixed;inset:0;z-index:0}
 #rain{position:fixed;inset:0;z-index:1;pointer-events:none}
@@ -48,13 +49,13 @@ body{
 .hud-right{margin-left:auto;display:flex;align-items:center;gap:12px}
 .legend{color:var(--purple);font-size:12px}
 .hud-btn{background:transparent;border:1px solid #2a3055;color:var(--dim);font:inherit;font-size:10px;
-  letter-spacing:1px;padding:4px 9px;cursor:pointer}
+  letter-spacing:1px;padding:4px 9px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .hud-btn:hover{color:var(--cyan);border-color:var(--cyan)}
 #panel{position:fixed;top:48px;right:0;bottom:0;width:400px;z-index:30;background:var(--panel);
   border-left:1px solid var(--line);display:flex;flex-direction:column}
 #tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
 .tab{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--faint);
-  font:inherit;font-size:11px;letter-spacing:1px;padding:10px 4px;cursor:pointer}
+  font:inherit;font-size:11px;letter-spacing:1px;padding:10px 4px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .tab:hover{color:var(--dim)}
 .tab.active{color:var(--cyan);border-bottom-color:var(--cyan);text-shadow:0 0 10px rgba(5,217,232,.6)}
 #tabContent{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:#2a3055 transparent}
@@ -71,7 +72,7 @@ body{
 .shop-cost{font-size:12px;color:var(--yellow);font-weight:bold}
 .shop-owned{font-size:10px;color:var(--cyan)}
 .btn{background:rgba(5,217,232,.08);border:1px solid var(--cyan);color:var(--cyan);font:inherit;
-  font-size:11px;letter-spacing:1px;padding:6px 12px;cursor:pointer}
+  font-size:11px;letter-spacing:1px;padding:6px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .btn:hover:not(:disabled){background:rgba(5,217,232,.22);box-shadow:0 0 12px rgba(5,217,232,.4)}
 .btn:disabled{opacity:.35;cursor:default}
 .btn.danger{border-color:var(--red);color:#ff6b6b;background:rgba(255,49,49,.07)}
@@ -132,7 +133,7 @@ body{
 .intro-box p{color:#b9bed6;font-size:14px;line-height:1.75;margin:9px 0}
 .intro-box b{color:var(--cyan)}
 .big-btn{margin-top:20px;background:rgba(255,42,109,.1);border:1px solid var(--pink);color:var(--pink);
-  font:inherit;font-size:15px;letter-spacing:3px;padding:12px 36px;cursor:pointer}
+  font:inherit;font-size:15px;letter-spacing:3px;padding:12px 36px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .big-btn:hover{background:rgba(255,42,109,.25);box-shadow:0 0 26px rgba(255,42,109,.5)}
 .modal{position:fixed;inset:0;z-index:70;background:rgba(3,4,10,.82);display:flex;align-items:center;justify-content:center;padding:20px}
 .modal-box{background:#0a0c1a;border:1px solid var(--cyan);padding:26px 32px;max-width:440px;width:100%;
@@ -146,14 +147,14 @@ body{
 .setup-box{max-width:660px}
 .setup-step{color:var(--dim);font-size:11px;letter-spacing:2px;margin:16px 0 8px;text-align:left}
 .setup-row{display:flex;gap:8px}
-#gangName{flex:1;background:rgba(5,217,232,.05);border:1px solid var(--cyan);color:var(--txt);font:inherit;font-size:15px;padding:9px 12px;letter-spacing:1px;outline:none;min-width:0}
+#gangName{flex:1;background:rgba(5,217,232,.05);border:1px solid var(--cyan);color:var(--txt);font:inherit;font-size:15px;padding:9px 12px;letter-spacing:1px;outline:none;min-width:0;-webkit-user-select:text;user-select:text}
 #gangName:focus{box-shadow:0 0 14px rgba(5,217,232,.35)}
 .emblem-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.emblem-cell{background:rgba(15,17,34,.7);border:1px solid var(--line);padding:5px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.emblem-cell{background:rgba(15,17,34,.7);border:1px solid var(--line);padding:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .emblem-cell:hover{border-color:var(--dim)}
 .emblem-cell.sel{border-color:var(--yellow);box-shadow:0 0 12px rgba(255,230,0,.4)}
 .color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.color-swatch{height:30px;border:1px solid var(--line);cursor:pointer;padding:0}
+.color-swatch{height:30px;border:1px solid var(--line);cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .color-swatch.sel{outline:2px solid #fff;outline-offset:1px}
 .start-box{max-width:520px}
 .start-box h1{font-size:26px;letter-spacing:4px;line-height:1.4}
@@ -187,7 +188,7 @@ body{
 .guard-row .g-name{flex:1;font-size:12px;font-weight:bold}
 .guard-row .g-bonus{font-size:10px;color:#8b91b5;flex:1}
 .stepper{display:flex;align-items:center;gap:6px}
-.stepper button{width:26px;height:26px;background:rgba(5,217,232,.08);border:1px solid var(--cyan);color:var(--cyan);font:inherit;font-size:14px;cursor:pointer;line-height:1}
+.stepper button{width:26px;height:26px;background:rgba(5,217,232,.08);border:1px solid var(--cyan);color:var(--cyan);font:inherit;font-size:14px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .stepper button:disabled{opacity:.3;cursor:default}
 .stepper .g-count{min-width:30px;text-align:center;font-weight:bold;color:#ffe600}
 @media(max-width:760px){
@@ -2082,6 +2083,13 @@ function init(){
     init._rt=setTimeout(function(){ buildSkyline(); initRain(); },200);
   });
   window.addEventListener('beforeunload',save);
+  if(document.addEventListener) document.addEventListener('touchend',function(e){
+    var t=e.target;
+    if(t&&t.tagName==='BUTTON'&&t._listeners&&t._listeners.click){
+      e.preventDefault();
+      t._listeners.click({target:t,preventDefault:function(){}});
+    }
+  },{passive:false});
   if(hadSave&&!saveHasGang){
     buildSetup();
     showView('setup');
