@@ -9,7 +9,7 @@ echo ""
 echo "==> syntax check"
 node --check tests/extracted.js && echo "syntax OK"
 echo ""
-for t in smoke frame_loop identity save_management rivals districts offline integration start_screen; do
+for t in smoke frame_loop identity save_management rivals districts offline integration start_screen version; do
   echo "==> tests/$t.js"
   node tests/$t.js | tail -1
 done
