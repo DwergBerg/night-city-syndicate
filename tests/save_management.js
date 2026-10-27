@@ -94,7 +94,12 @@ setTimeout(function(){
   assert(s2.crew===15,'reloaded crew: '+s2.crew);
   assert(s2.gang.name==='Save Test Crew','reloaded gang name: '+s2.gang.name);
   assert(s2.gear[0]===3,'reloaded gear');
-  assert(getEl('intro').style.display==='none','reloaded save with gang skips naming screen');
+  assert(getEl('intro').style.display==='flex','reloaded save with gang shows start screen');
+  assert(getEl('startBox').style.display==='block','reloaded save shows start menu (not setup)');
+  assert(getEl('btnContinue').style.display==='block','CONTINUE visible for reloaded save');
+  assert(getEl('setupBox').style.display==='none','setup hidden for reloaded save with gang');
+  getEl('btnContinue').click();
+  assert(getEl('intro').style.display==='none','CONTINUE enters game after reload');
   console.log('ok - full export -> wipe -> import -> reload cycle preserves everything');
 
   // --- Old save (no gang) still loads after this update ---

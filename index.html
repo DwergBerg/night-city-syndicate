@@ -155,6 +155,20 @@ body{
 .color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
 .color-swatch{height:30px;border:1px solid var(--line);cursor:pointer;padding:0}
 .color-swatch.sel{outline:2px solid #fff;outline-offset:1px}
+.start-box{max-width:520px}
+.start-box h1{font-size:26px;letter-spacing:4px;line-height:1.4}
+.start-sub{color:var(--dim);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:26px}
+.start-btns{display:flex;flex-direction:column;gap:12px;align-items:stretch;max-width:300px;margin:0 auto}
+.start-btns .big-btn{margin-top:0}
+.start-foot{color:var(--faint);font-size:10px;margin-top:24px;line-height:1.6}
+.back-btn{margin-top:10px}
+.options-box{max-width:440px}
+.options-box h1{font-size:24px}
+.opt-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(15,17,34,.7);
+  border:1px solid var(--line);padding:10px 12px;margin-bottom:8px;font-size:13px}
+.opt-row.danger{border-color:rgba(255,49,49,.4)}
+.opt-row.danger span{color:#ff6b6b}
+.options-box .big-btn{margin-top:16px}
 #eventLog{position:fixed;left:12px;bottom:12px;width:300px;max-height:150px;overflow-y:auto;z-index:35;pointer-events:none;background:rgba(6,7,16,.78);border:1px solid var(--line);padding:7px 9px;font-size:10px;line-height:1.55;scrollbar-width:thin;scrollbar-color:#2a3055 transparent}
 #eventLog .ev{opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toast{cursor:pointer;pointer-events:auto}
@@ -232,7 +246,17 @@ body{
 <input type="file" id="importFile" accept=".json,application/json" style="display:none">
 
 <div id="intro">
-  <div class="intro-box setup-box">
+  <div class="intro-box start-box" id="startBox">
+    <h1 data-text="NIGHT CITY SYNDICATE">NIGHT CITY SYNDICATE</h1>
+    <p class="start-sub">A cyberpunk crime empire simulator</p>
+    <div class="start-btns">
+      <button id="btnContinue" class="big-btn">CONTINUE</button>
+      <button id="btnNewGame" class="big-btn">NEW GAME</button>
+      <button id="btnOptions" class="big-btn">OPTIONS</button>
+    </div>
+    <p class="start-foot">Progress autosaves in this browser. Export your save from the Stats tab to back it up.</p>
+  </div>
+  <div class="intro-box setup-box" id="setupBox" style="display:none">
     <h1 data-text="START YOUR EMPIRE">START YOUR EMPIRE</h1>
     <p>Every syndicate needs a name, a symbol, and a color. The streets will learn to fear all three.</p>
     <div class="setup-step">1 — NAME YOUR GANG</div>
@@ -245,6 +269,15 @@ body{
     <div class="setup-step">3 — PICK YOUR NEON COLOR</div>
     <div class="color-grid" id="colorGrid"></div>
     <button id="btnStart" class="big-btn">FOUND THE GANG</button>
+    <button id="btnSetupBack" class="btn back-btn">BACK</button>
+  </div>
+  <div class="intro-box options-box" id="optionsBox" style="display:none">
+    <h1 data-text="OPTIONS">OPTIONS</h1>
+    <div class="opt-row"><span>Sound effects</span><button id="btnOptSound" class="btn">SOUND ON</button></div>
+    <div class="opt-row"><span>Export save (backup)</span><button id="btnOptExport" class="btn">EXPORT SAVE</button></div>
+    <div class="opt-row"><span>Import save (restore)</span><button id="btnOptImport" class="btn">IMPORT SAVE</button></div>
+    <div class="opt-row danger"><span>Wipe all progress</span><button id="btnOptWipe" class="btn danger">WIPE SAVE</button></div>
+    <button id="btnOptBack" class="big-btn">BACK</button>
   </div>
 </div>
 
@@ -1887,10 +1920,32 @@ function frame(now){
 
 var setupSel={emblem:EMBLEMS[0].id,color:GANG_COLORS[1]};
 var setupNamed=false;
+var hadSave=false;
+var saveHasGang=false;
+
+function ensureGang(){
+  if(!S.gang||typeof S.gang!=='object') S.gang={name:'',emblem:setupSel.emblem,color:setupSel.color};
+}
+
+function showView(name){
+  $('startBox').style.display=name==='start'?'block':'none';
+  $('setupBox').style.display=name==='setup'?'block':'none';
+  $('optionsBox').style.display=name==='options'?'block':'none';
+  $('intro').style.display='flex';
+}
+
 function buildSetup(){
-  if(!S.gang) S.gang={name:'',emblem:setupSel.emblem,color:setupSel.color};
-  $('gangName').value=S.gang.name||randomGangName();
-  if(!S.gang.name) setupNamed=false;
+  ensureGang();
+  var input=$('gangName');
+  var typed=input.value.trim();
+  if(typed){
+    S.gang.name=typed;
+  }else if(S.gang.name){
+    input.value=S.gang.name;
+  }else{
+    input.value=randomGangName();
+    S.gang.name=input.value;
+  }
   var eg=$('emblemGrid'); eg.innerHTML='';
   EMBLEMS.forEach(function(e){
     var cell=el('button','emblem-cell');
@@ -1901,6 +1956,7 @@ function buildSetup(){
     cell.appendChild(cv);
     cell.addEventListener('click',function(){
       setupSel.emblem=e.id;
+      ensureGang();
       S.gang.emblem=e.id;
       buildSetup();
     });
@@ -1913,6 +1969,7 @@ function buildSetup(){
     sw.style.background=c;
     sw.addEventListener('click',function(){
       setupSel.color=c;
+      ensureGang();
       S.gang.color=c;
       buildSetup();
     });
@@ -1921,21 +1978,36 @@ function buildSetup(){
   });
 }
 
+function enterGame(isNew){
+  ensureGang();
+  var v=$('gangName').value.trim();
+  S.gang.name=v||randomGangName();
+  S.gang.emblem=setupSel.emblem;
+  S.gang.color=setupSel.color;
+  setupNamed=true;
+  $('intro').style.display='none';
+  save();
+  audio();
+  if(isNew) toast(TIERS[0].line,TIERS[0].color);
+  toast(S.gang.name+' is born. Make the city remember the name.',S.gang.color);
+}
+
+function startNewGame(){
+  var fresh=freshState();
+  for(var k in fresh) S[k]=fresh[k];
+  S.gang={name:'',emblem:setupSel.emblem,color:setupSel.color};
+  setupNamed=false;
+  buildSetup();
+  showView('setup');
+}
+
 function init(){
-  var hadSave=load();
-  if(hadSave){
-    if(!S.gang||!S.gang.name){
-      $('intro').style.display='flex';
-      buildSetup();
-    }else{
-      $('intro').style.display='none';
-    }
+  hadSave=load();
+  saveHasGang=!!(hadSave&&S.gang&&S.gang.name);
+  if(saveHasGang){
     if(S.labs[0]>0) extraSeen[0]=-1e9;
     if(S.labs[1]>0) extraSeen[1]=-1e9;
     applyOffline();
-  }else{
-    $('intro').style.display='flex';
-    buildSetup();
   }
   buildSkyline();
   initRain();
@@ -1947,25 +2019,57 @@ function init(){
     $('btnSound').textContent='SOUND '+(S.sound?'ON':'OFF');
     save();
   });
+  $('btnContinue').style.display=saveHasGang?'block':'none';
+  $('btnContinue').addEventListener('click',function(){
+    $('intro').style.display='none';
+    save();
+    audio();
+  });
+  $('btnNewGame').addEventListener('click',function(){
+    if(saveHasGang){
+      if(!window.confirm('Start a NEW game?\n\nYour current save will be OVERWRITTEN. Export it first from the Stats tab if you want to keep it.')) return;
+    }
+    startNewGame();
+  });
+  $('btnOptions').addEventListener('click',function(){
+    $('btnOptSound').textContent='SOUND '+(S.sound?'ON':'OFF');
+    showView('options');
+  });
+  $('btnSetupBack').addEventListener('click',function(){
+    showView('start');
+  });
+  $('btnOptBack').addEventListener('click',function(){
+    showView('start');
+  });
+  $('btnOptSound').addEventListener('click',function(){
+    S.sound=!S.sound;
+    $('btnOptSound').textContent='SOUND '+(S.sound?'ON':'OFF');
+    $('btnSound').textContent='SOUND '+(S.sound?'ON':'OFF');
+    save();
+  });
+  $('btnOptExport').addEventListener('click',function(){
+    if(saveHasGang){ exportSave(); }
+    else{ toast('No save to export yet — start a game first.','#ff3131'); }
+  });
+  $('btnOptImport').addEventListener('click',function(){
+    $('importFile').click();
+  });
+  $('btnOptWipe').addEventListener('click',function(){
+    hardReset();
+  });
   $('btnRandName').addEventListener('click',function(){
+    ensureGang();
     $('gangName').value=randomGangName();
     S.gang.name=$('gangName').value;
   });
   $('gangName').addEventListener('input',function(){
+    ensureGang();
     var v=$('gangName').value.trim();
     S.gang.name=v||'The Unnamed';
   });
   $('btnStart').addEventListener('click',function(){
-    var v=$('gangName').value.trim();
-    S.gang.name=v||randomGangName();
-    S.gang.emblem=setupSel.emblem;
-    S.gang.color=setupSel.color;
-    setupNamed=true;
-    $('intro').style.display='none';
-    save();
-    audio();
-    if(!hadSave) toast(TIERS[0].line,TIERS[0].color);
-    toast(S.gang.name+' is born. Make the city remember the name.',S.gang.color);
+    var isNew=!saveHasGang;
+    enterGame(isNew);
   });
   $('btnOfflineClose').addEventListener('click',function(){
     $('offline').style.display='none';
@@ -1978,6 +2082,12 @@ function init(){
     init._rt=setTimeout(function(){ buildSkyline(); initRain(); },200);
   });
   window.addEventListener('beforeunload',save);
+  if(hadSave&&!saveHasGang){
+    buildSetup();
+    showView('setup');
+  }else{
+    showView('start');
+  }
   requestAnimationFrame(frame);
 }
 
@@ -2012,6 +2122,16 @@ window.__game={
   tierIndex:tierIndex,
   drawEmblem:drawEmblem,
   buildSetup:buildSetup,
+  showView:showView,
+  enterGame:enterGame,
+  startNewGame:startNewGame,
+  ensureGang:ensureGang,
+  freshState:freshState,
+  hardReset:hardReset,
+  exportSave:exportSave,
+  importSave:importSave,
+  hadSave:function(){ return hadSave; },
+  saveHasGang:function(){ return saveHasGang; },
   C:C, CRIMES:CRIMES, GEAR:GEAR, OPS:OPS, LABS:LABS, TIERS:TIERS,
   EMBLEMS:EMBLEMS, GANG_COLORS:GANG_COLORS, randomGangName:randomGangName,
   DISTRICTS:DISTRICTS, RIVALS:RIVALS

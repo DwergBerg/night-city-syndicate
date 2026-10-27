@@ -2,7 +2,7 @@
 var fs=require('fs');
 var src=fs.readFileSync(require('path').join(__dirname,'extracted.js'),'utf8');
 function makeCtx(){var g={addColorStop:function(){}};return new Proxy({},{get:function(t,p){if(p==='canvas')return{width:800,height:600};if(p==='createLinearGradient'||p==='createRadialGradient')return function(){return g;};return function(){};},set:function(){return true;}});}
-function makeEl(id){var el={id:id,style:{_display:undefined},children:[],classList:{add:function(){},remove:function(){},toggle:function(){}},_text:'',innerHTML:'',value:'',appendChild:function(c){this.children.push(c);this._syncFirst();return c;},removeChild:function(c){var i=this.children.indexOf(c);if(i>=0)this.children.splice(i,1);this._syncFirst();return c;},_syncFirst:function(){Object.defineProperty(this,'firstChild',{get:function(){return this.children[0]||null;},configurable:true});},firstChild:null,scrollTop:0,scrollHeight:0,addEventListener:function(){},querySelectorAll:function(){return [];},getBoundingClientRect:function(){return{left:100,top:100,width:50,height:20};},getContext:function(){return makeCtx();},setAttribute:function(){},getAttribute:function(){return null;},parentNode:null};Object.defineProperty(el,'textContent',{get:function(){return this._text;},set:function(v){this._text=String(v);}});Object.defineProperty(el.style,'display',{get:function(){return this._display;},set:function(v){this._display=v;}});el._syncFirst();return el;}
+function makeEl(id){var el={id:id,style:{_display:undefined},children:[],classList:{add:function(){},remove:function(){},toggle:function(){}},_text:'',innerHTML:'',value:'',appendChild:function(c){this.children.push(c);this._syncFirst();return c;},removeChild:function(c){var i=this.children.indexOf(c);if(i>=0)this.children.splice(i,1);this._syncFirst();return c;},_syncFirst:function(){Object.defineProperty(this,'firstChild',{get:function(){return this.children[0]||null;},configurable:true});},firstChild:null,scrollTop:0,scrollHeight:0,addEventListener:function(ev,fn){(this._listeners=this._listeners||{})[ev]=fn;},click:function(){if(this._listeners&&this._listeners.click)this._listeners.click({target:this});},querySelectorAll:function(){return [];},getBoundingClientRect:function(){return{left:100,top:100,width:50,height:20};},getContext:function(){return makeCtx();},setAttribute:function(){},getAttribute:function(){return null;},parentNode:null};Object.defineProperty(el,'textContent',{get:function(){return this._text;},set:function(v){this._text=String(v);}});Object.defineProperty(el.style,'display',{get:function(){return this._display;},set:function(v){this._display=v;}});el._syncFirst();return el;}
 var els={};function getEl(id){if(!els[id])els[id]=makeEl(id);return els[id];}
 var store={};var localStorage={getItem:function(k){return Object.prototype.hasOwnProperty.call(store,k)?store[k]:null;},setItem:function(k,v){store[k]=String(v);},removeItem:function(k){delete store[k];}};
 var document={getElementById:getEl,createElement:function(t){return makeEl(t);},querySelectorAll:function(){return[];},body:makeEl('body')};
@@ -168,7 +168,12 @@ assert(s2.gang.name==='Legacy Crew','legacy gang preserved');
 assert(s2.districts.length===6,'legacy save gets 6 districts');
 assert(s2.rivals.length===3,'legacy save gets 3 rivals');
 assert(s2.districts.every(function(d){return d.owner===null;}),'legacy districts start unowned');
-assert(getEl('intro').style.display==='none','legacy save with gang skips naming');
+assert(getEl('intro').style.display==='flex','legacy save with gang shows start screen');
+assert(getEl('startBox').style.display==='block','legacy save shows start menu (not setup)');
+assert(getEl('btnContinue').style.display==='block','CONTINUE visible for legacy save');
+assert(getEl('setupBox').style.display==='none','setup hidden for legacy save with gang');
+getEl('btnContinue').click();
+assert(getEl('intro').style.display==='none','CONTINUE enters game for legacy save');
 console.log('ok - legacy save migrates with districts+rivals');
 
 console.log('\nSTEP 3 (RIVALS + CONTESTS) ALL TESTS PASSED');

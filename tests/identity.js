@@ -2,7 +2,7 @@
 var fs=require('fs');
 var src=fs.readFileSync(require('path').join(__dirname,'extracted.js'),'utf8');
 function makeCtx(){var g={addColorStop:function(){}};return new Proxy({},{get:function(t,p){if(p==='canvas')return{width:800,height:600};if(p==='createLinearGradient'||p==='createRadialGradient')return function(){return g;};return function(){};},set:function(){return true;}});}
-function makeEl(id){var el={id:id,style:{_display:undefined},children:[],classList:{add:function(){},remove:function(){},toggle:function(){}},_text:'',innerHTML:'',value:'',appendChild:function(c){this.children.push(c);return c;},addEventListener:function(){},querySelectorAll:function(){return [];},getBoundingClientRect:function(){return{left:100,top:100,width:50,height:20};},getContext:function(){return makeCtx();},setAttribute:function(){},getAttribute:function(){return null;},parentNode:null};Object.defineProperty(el,'textContent',{get:function(){return this._text;},set:function(v){this._text=String(v);}});Object.defineProperty(el.style,'display',{get:function(){return this._display;},set:function(v){this._display=v;}});return el;}
+function makeEl(id){var el={id:id,style:{_display:undefined},children:[],classList:{add:function(){},remove:function(){},toggle:function(){}},_text:'',innerHTML:'',value:'',appendChild:function(c){this.children.push(c);return c;},addEventListener:function(ev,fn){(this._listeners=this._listeners||{})[ev]=fn;},click:function(){if(this._listeners&&this._listeners.click)this._listeners.click({target:this});},querySelectorAll:function(){return [];},getBoundingClientRect:function(){return{left:100,top:100,width:50,height:20};},getContext:function(){return makeCtx();},setAttribute:function(){},getAttribute:function(){return null;},parentNode:null};Object.defineProperty(el,'textContent',{get:function(){return this._text;},set:function(v){this._text=String(v);}});Object.defineProperty(el.style,'display',{get:function(){return this._display;},set:function(v){this._display=v;}});return el;}
 function freshEls(){els={};for(var k in store) delete store[k];}
 var els={};function getEl(id){if(!els[id])els[id]=makeEl(id);return els[id];}
 var store={};var localStorage={getItem:function(k){return store[k]||null;},setItem:function(k,v){store[k]=String(v);},removeItem:function(k){delete store[k];}};
@@ -17,7 +17,12 @@ function assert(c,m){if(!c){console.log('FAIL:',m);process.exit(1);}console.log(
 
 // --- Test A: fresh game, no save -> intro shown, gang empty until setup ---
 var s=G.state();
-assert(getEl('intro').style.display==='flex','fresh game shows setup screen');
+assert(getEl('intro').style.display==='flex','fresh game shows start screen');
+assert(getEl('startBox').style.display==='block','fresh game shows start menu (not setup)');
+assert(getEl('btnContinue').style.display==='none','no CONTINUE on fresh launch');
+// navigate to setup via NEW GAME
+getEl('btnNewGame').click();
+assert(getEl('setupBox').style.display==='block','NEW GAME shows setup screen');
 // buildSetup() pre-fills the input with a random name and assigns it to S.gang.name
 // (the player can change it before confirming). What matters: the screen is shown
 // and the HUD gang chip is hidden until the player confirms.
@@ -36,19 +41,12 @@ var cv=document.createElement('canvas'); cv.width=40; cv.height=40;
 G.EMBLEMS.forEach(function(e){ G.drawEmblem(cv.getContext('2d'),e.id,'#ff2a6d',20,20,40); });
 console.log('ok - all 12 emblems draw without error');
 
-// simulate setup completion (set name, emblem, color, click start)
+// simulate setup completion (set name, then click FOUND THE GANG)
 getEl('gangName').value='The Test Syndicate';
-getEl('gangName')._text='The Test Syndicate';
-// trigger input handler
-var inputEv=getEl('gangName');
-// our stub doesn't store listeners; call through the button path instead:
-// directly set state as the start button would
-s.gang.name='The Test Syndicate';
-s.gang.emblem='dragon';
-s.gang.color='#ff2a6d';
-getEl('btnStart').click&&0;
-// call the start handler via the exposed path: simulate by invoking what btnStart does
-// (our stub addEventListener is a no-op, so just verify HUD update path)
+getEl('gangName')._listeners.input({target:getEl('gangName')});
+getEl('btnStart').click();
+assert(getEl('intro').style.display==='none','FOUND THE GANG hides intro');
+assert(s.gang.name==='The Test Syndicate','gang name set via setup');
 G.tab('crimes');
 // force HUD update by running a tick
 G.tick(0.1);
@@ -76,8 +74,10 @@ assert(s2.eddies===5000,'old save eddies preserved: '+s2.eddies);
 assert(s2.crew===7,'old save crew preserved: '+s2.crew);
 assert(s2.gear[0]===1,'old save gear preserved');
 assert(s2.ops[0]===1,'old save ops preserved');
-assert(!s2.gang||!s2.gang.name,'old save has no gang name -> naming screen required, got: '+JSON.stringify(s2.gang));
+assert(G2.saveHasGang()===false,'old save has no gang name -> naming screen required (saveHasGang=false)');
 assert(getEl('intro').style.display==='flex','old save shows naming screen exactly once');
+assert(getEl('setupBox').style.display==='block','old save goes directly to setup view (migration)');
+assert(getEl('startBox').style.display==='none','old save does not show start menu first');
 console.log('ok - old save migrates: naming screen shown, progress intact');
 
 // complete naming for the migrated save (simulate clicking FOUND THE GANG)
@@ -100,7 +100,13 @@ vm.runInContext(src,sandbox3,{timeout:10000});
 var G3=sandbox3.window.__game;
 var s3=G3.state();
 assert(s3.gang.name==='Veteran Crew','new save keeps chosen gang name');
-assert(getEl('intro').style.display==='none','new save with gang skips naming screen');
+assert(getEl('intro').style.display==='flex','new save with gang shows start screen (with CONTINUE)');
+assert(getEl('startBox').style.display==='block','new save with gang shows start menu');
+assert(getEl('btnContinue').style.display==='block','CONTINUE visible for save with gang');
+assert(getEl('setupBox').style.display==='none','setup hidden for save with gang');
+// CONTINUE enters the game
+getEl('btnContinue').click();
+assert(getEl('intro').style.display==='none','CONTINUE enters game (intro hidden)');
 assert(s3.gang.name.toUpperCase()==='VETERAN CREW','veteran gang name ready for HUD');
 
 // --- Test D: member cards use gang color ---
