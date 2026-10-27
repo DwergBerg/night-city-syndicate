@@ -15,7 +15,7 @@ function makeCtx(){
 }
 function makeEl(id){
   var el={
-    id:id, style:{}, children:[], classList:{add:function(){},remove:function(){},toggle:function(){}},
+    id:id, style:{}, children:[], classList:{add:function(){},remove:function(){},toggle:function(){},contains:function(c){return false;}},
     _text:'', innerHTML:'',
     appendChild:function(c){ this.children.push(c); return c; },
     addEventListener:function(){}, querySelectorAll:function(){return [];},

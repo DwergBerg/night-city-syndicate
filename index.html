@@ -1831,12 +1831,20 @@ function hexA(hex,a){
 
 var tabBtns=[];
 function wireTabs(){
-  var btns=$('tabs').querySelectorAll('.tab');
+  var nav=$('tabs');
+  var btns=[];
+  for(var ci=0;ci<nav.children.length;ci++){
+    var ch=nav.children[ci];
+    var cls=ch.className||'';
+    if(cls.indexOf('tab')>=0) btns.push(ch);
+  }
+  if(btns.length===0&&nav.querySelectorAll) btns=nav.querySelectorAll('.tab');
   for(var i=0;i<btns.length;i++){
+    var btn=btns[i];
     (function(b){
       b.addEventListener('click',function(){ switchTab(b.getAttribute('data-tab')); });
-    })(btns[i]);
-    tabBtns.push(b);
+    })(btn);
+    tabBtns.push(btn);
   }
 }
 
