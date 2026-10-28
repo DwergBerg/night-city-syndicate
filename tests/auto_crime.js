@@ -17,7 +17,7 @@ function assert(c,m){if(!c){console.log('FAIL:',m);process.exit(1);}console.log(
 // Setup: 10 crew members, all fields initialized
 S.crew=10;
 S.members=[];
-for(var i=0;i<10;i++) S.members.push({name:'Member'+i,role:'Brawler',color:'#ff2a6d',assignedCrime:-1});
+for(var i=0;i<10;i++) S.members.push({name:'Member'+i,role:'Brawler',color:'#ff2a6d',assignedCrime:-1,injury:0});
 S.eddies=1e12;
 S.heat=0;
 S.cds=[0,0,0,0,0];
@@ -92,11 +92,34 @@ assert(S.crimeCrew[0]<=1,'crimeCrew[0] decremented when member injured (got '+S.
 assert(S.jobLog&&S.jobLog.length>0,'job log recorded the failure');
 var flLine=S.jobLog[S.jobLog.length-1];
 assert(flLine.text.indexOf('FLATLINED')>=0||flLine.text.indexOf('sideways')>=0,'failure line logged: '+flLine.text);
+var injured=S.members.find(function(m){ return m.injury>0; });
+assert(injured,'injured member has injury>0');
+assert(injured.injury>=3600,'injury lasts at least 1 hour ('+(injured.injury/3600).toFixed(2)+'h)');
+assert(injured.assignedCrime===-1,'injured member unassigned from job');
 
-// Test 10: injured member returns to passive income pool (activeCrew counts them again)
-S.members.forEach(function(m){ m.assignedCrime=-1; });
+// Test 10: injured member is out of the passive pool until recovered; heat scales injury time
 S.crimeCrew=[0,0,0,0,0];
-assert(G.activeCrew()===S.crew,'all crew back in passive pool after injury');
+var injuredCount=G.injuredCrew();
+assert(injuredCount===1,'1 injured crew counted (got '+injuredCount+')');
+assert(G.activeCrew()===S.crew-1,'injured member excluded from passive earning (got '+G.activeCrew()+')');
+S.heat=80;
+S.members.forEach(function(m){ m.assignedCrime=-1; m.injury=0; });
+S.crimeCrew=[0,0,0,0,0];
+G.assignCrewToCrime(0,1);
+var seq2=[0.5,0.999,0.001];
+var si2=0;
+Math.random=function(){ return seq2[si2++%seq2.length]; };
+S.cds=[0,0,0,0,0];
+G.autoCrimeTick(0.1);
+Math.random=origRandom;
+var injuredHigh=S.members.find(function(m){ return m.injury>0; });
+assert(injuredHigh&&injuredHigh.injury>3600,'injury scales with heat: 80 heat gives >1h (got '+(injuredHigh?injuredHigh.injury.toFixed(0):'none')+'s)');
+// recovery: tick past the timer
+var injLeft=injuredHigh.injury;
+G.injuryTick(injLeft+1);
+assert(injuredHigh.injury===0,'injury timer ticks down to full recovery');
+assert(G.injuredCrew()===0,'no injured crew after recovery');
+assert(G.activeCrew()===S.crew,'recovered member back in passive pool');
 
 // Test 11: more crew assigned means higher payout multiplier on success
 S.heat=0;
@@ -119,7 +142,7 @@ Math.random=origRandom;
 
 // Test 12: FLATLINED text in source (injured, not jailed)
 assert(src.indexOf('FLATLINED')>=0,'FLATLINED text in source');
-assert(src.indexOf('jailed')<0,'jail system removed from source');
+assert(src.indexOf('JAIL ')<0&&src.indexOf('jailBase')<0&&src.indexOf('jailedCrew')<0&&src.indexOf('is out of jail')<0,'jail system removed from source (jailed CSS class reused for injured cards is OK)');
 assert(src.indexOf('assignedCrime=-1;')>=0,'injured members unassigned in source');
 
 // Test 13: save migration adds crimeCrew/autoCds/member fields for old saves
@@ -134,11 +157,12 @@ var S2=window.__game.state();
 assert(Array.isArray(S2.crimeCrew)&&S2.crimeCrew.length===5,'migrated save has crimeCrew[5]');
 assert(Array.isArray(S2.autoCds)&&S2.autoCds.length===5,'migrated save has autoCds[5]');
 assert(typeof S2.members[0].assignedCrime==='number','migrated member has assignedCrime field');
+assert(typeof S2.members[0].injury==='number','migrated member has injury field');
 
 // Test 14: casualties properly decrement crimeCrew when assigned members die
 S.crew=5;
 S.members=[];
-for(var j=0;j<5;j++) S.members.push({name:'C'+j,role:'Brawler',color:'#ff2a6d',assignedCrime:-1});
+for(var j=0;j<5;j++) S.members.push({name:'C'+j,role:'Brawler',color:'#ff2a6d',assignedCrime:-1,injury:0});
 S.crimeCrew=[0,0,0,0,0];
 G.assignCrewToCrime(0,3);
 assert(S.crimeCrew[0]===3,'3 assigned before casualties');
@@ -155,7 +179,7 @@ S.cds=[0,0,0,0,0];
 S.crimeCrew=[0,0,0,0,0];
 S.members.forEach(function(m){ m.assignedCrime=-1; });
 S.crew=5;
-while(S.members.length<5) S.members.push({name:'X'+S.members.length,role:'Brawler',color:'#ff2a6d',assignedCrime:-1});
+while(S.members.length<5) S.members.push({name:'X'+S.members.length,role:'Brawler',color:'#ff2a6d',assignedCrime:-1,injury:0});
 G.assignCrewToCrime(0,1);
 S.cds=[0,0,0,0,0];
 G.autoCrimeTick(0.1);
