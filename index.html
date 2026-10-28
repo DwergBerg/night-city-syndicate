@@ -898,13 +898,12 @@ function rivalTick(dt){
 function attackDistrict(di){
   var d=S.districts[di], D=DISTRICTS[di];
   if(!d||d.owner==='player') return {ok:false,reason:'already yours'};
-  if(d.owner===null) return {ok:false,reason:'unclaimed'};
   var cost=Math.max(1,Math.floor(S.crew*C.attackCrewCost));
   if(S.crew<cost) return {ok:false,reason:'need '+cost+' crew'};
   var rival=null, ri=-1;
   for(var i=0;i<S.rivals.length;i++) if(S.rivals[i].name===d.owner){ rival=S.rivals[i]; ri=i; break; }
   var atkStrength=(cost+1)*(0.8+Math.random()*0.6)*(1+S.crew*0.008);
-  var defStrength=rival? rivalStrength(rival)*(0.7+Math.random()*0.6):1;
+  var defStrength=rival? rivalStrength(rival)*(0.7+Math.random()*0.6):(1.2+Math.random()*1.5);
   var win=atkStrength>=defStrength;
   S.heat=Math.min(C.heatMax,S.heat+C.attackHeat);
   var lost=applyCasualties(Math.floor(cost*(win?0.2:0.6)+Math.random()*cost*0.3));
@@ -928,12 +927,12 @@ function attackDistrict(di){
 
 function attackOdds(di){
   var d=S.districts[di];
-  if(!d||d.owner==='player'||d.owner===null) return 0;
+  if(!d||d.owner==='player') return 0;
   var cost=Math.max(1,Math.floor(S.crew*C.attackCrewCost));
   var rival=null;
   for(var i=0;i<S.rivals.length;i++) if(S.rivals[i].name===d.owner){ rival=S.rivals[i]; break; }
   var atk=(cost+1)*(1+S.crew*0.008);
-  var def=rival? rivalStrength(rival):1;
+  var def=rival? rivalStrength(rival):2;
   return Math.min(0.95,Math.max(0.05,atk/(atk+def)));
 }
 
@@ -1622,9 +1621,10 @@ function buildDistricts(){
     var guards=el('span','d-guards');
     cell.appendChild(guards);
     cell.addEventListener('click',function(){
-      if(d.owner&&d.owner!=='player'){
+      if(d.owner!=='player'){
         var odds=attackOdds(di);
-        if(!window.confirm('Attack '+D.name+' (held by '+d.owner+')?\n\nSuccess odds: '+Math.round(odds*100)+'%\nCost: '+Math.max(1,Math.floor(S.crew*C.attackCrewCost))+' crew committed\n+12 heat')) return;
+        var holder=d.owner?d.owner:'unclaimed \u2014 scattered street gangs';
+        if(!window.confirm('Attack '+D.name+' ('+holder+')?\n\nSuccess odds: '+Math.round(odds*100)+'%\nCost: '+Math.max(1,Math.floor(S.crew*C.attackCrewCost))+' crew committed\n+12 heat')) return;
         attackDistrict(di);
         buildDistricts();
       }
