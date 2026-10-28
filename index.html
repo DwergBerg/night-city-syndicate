@@ -271,7 +271,7 @@ body{
   <div class="intro-box start-box" id="startBox">
     <h1 data-text="NIGHT CITY SYNDICATE">NIGHT CITY SYNDICATE</h1>
     <p class="start-sub">A cyberpunk crime empire simulator</p>
-    <p class="start-ver">v1.4.0</p>
+    <p class="start-ver">v1.5.0</p>
     <div class="start-btns">
       <button id="btnContinue" class="big-btn">CONTINUE</button>
       <button id="btnNewGame" class="big-btn">NEW GAME</button>
@@ -335,7 +335,9 @@ var C={
   offlineIncomeMult:0.30, offlineHeatDecayMult:3.0, offlineContestChance:0.5,
   autoHeatMult:0.5, crimeHeatMult:0.75, autoCrewPay:0.15, autoCrewRisk:0.03,
   jobLogMax:40,
-  injuryBase:3600, injuryHeatScale:0.6
+  injuryBase:3600, injuryHeatScale:0.6, heatDeathPct:0.05,
+  fixerBase:2e6, fixerInc:2.0, fixerDuration:6*3600, fixerBribeMult:1.0,
+  drugBase:40, drugCrewInc:0.35, drugBustBase:0.02, drugBustHeatScale:0.5, drugBustKill:0.5
 };
 
 var CRIMES=[
@@ -344,6 +346,12 @@ var CRIMES=[
   {name:'Robbery', desc:'Hit a corner store with the crew.', base:1800, cd:12, succ:0.75, dSucc:0.006, heat:8, req:10, color:'#ffe600'},
   {name:'Heist', desc:'Hit an armored AV with military iron.', base:70000, cd:28, succ:0.50, dSucc:0.004, heat:18, req:30, color:'#ff2a6d'},
   {name:'Net Heist', desc:'Breach corp ice from a terminal.', base:150000, cd:60, succ:0.55, dSucc:0.003, heat:40, req:80, color:'#b967ff'}
+];
+
+var DRUGS=[
+  {name:'Synth-Coke', desc:'Cheap party fuel. Fast cook, street-level sales.', base:1.0, cost:0},
+  {name:'Black Lace', desc:'Combat stim. Mid-market, mid-risk.', base:2.5, cost:5e6},
+  {name:'Zenith', desc:'Designer neural drug. High margin, high heat.', base:6.0, cost:5e7}
 ];
 
 var GEAR=[
@@ -531,7 +539,9 @@ function freshState(){
     districts:DISTRICTS.map(function(){ return {owner:null, guards:0, contested:0}; }),
     rivals:RIVALS.map(function(r,i){ return {name:r.name,emblem:r.emblem,color:r.color,strength:r.strength}; }),
     eventLog:[], rivalTimer:180+Math.random()*120, casualties:0,
-    jobLog:[]
+    jobLog:[],
+    fixerHires:0, fixerTimer:0,
+    drugType:0, drugUnlocked:[true,false,false], drugCook:0, drugSell:0
   };
 }
 
@@ -558,8 +568,12 @@ function districtBonusMult(){
 function incomeMult(){
   var x=1+gInc(), i, k;
   for(i=0;i<4;i++) for(k=0;k<S.ops[i];k++) x*=OPS[i].mult;
-  for(i=0;i<2;i++) for(k=0;k<S.labs[i];k++) x*=LABS[i].mult*(districtBonusMult().labMult);
   return x*S.legend*districtBonusMult().mult;
+}
+function labMult(){
+  var x=1, i;
+  for(i=0;i<2;i++) if(S.labs[i]) x*=LABS[i].mult*(districtBonusMult().labMult);
+  return x;
 }
 function guardedCrew(){
   var g=0, i;
@@ -577,14 +591,22 @@ function injuredCrew(){
   return n;
 }
 function activeCrew(){ return Math.max(0,S.crew-guardedCrew()-crimeAssignedCrew()-injuredCrew()); }
-function ips(){ return activeCrew()*C.crewIncome*(1+activeCrew()*C.crewSyn)*incomeMult(); }
+function drugIncome(){
+  var owned=0, i;
+  for(i=0;i<2;i++) owned+=S.labs[i]?1:0;
+  if(owned===0||S.drugCook<1||S.drugSell<1) return 0;
+  var type=DRUGS[S.drugType]||DRUGS[0];
+  var production=Math.min(S.drugCook,S.drugSell);
+  return C.drugBase*type.base*owned*production*(1+(S.drugCook+S.drugSell)*C.drugCrewInc)*labMult()*incomeMult();
+}
+function ips(){ return activeCrew()*C.crewIncome*(1+activeCrew()*C.crewSyn)*incomeMult()+drugIncome(); }
 function taxPct(){ return S.heat>C.heatTaxAt ? Math.min(0.9,(S.heat-C.heatTaxAt)*C.heatTaxPct) : 0; }
 function succChance(i){
-  var s=CRIMES[i].succ+activeCrew()*CRIMES[i].dSucc+gSuc()+districtBonusMult().succ;
+  var s=(CRIMES[i].succ+S.crew*CRIMES[i].dSucc+districtBonusMult().succ)*(1+gSuc());
   if(S.heat>C.heatFailAt) s-=(S.heat-C.heatFailAt)*C.heatFailPct;
   return Math.min(0.97,Math.max(0.05,s));
 }
-function payout(i){ return CRIMES[i].base*(1+activeCrew()*C.crewPayout+gInc())*(1-taxPct())*districtBonusMult().payMult; }
+function payout(i){ return CRIMES[i].base*(1+S.crew*C.crewPayout)*(1+gInc())*(1-taxPct())*districtBonusMult().payMult; }
 function netWorth(){
   var nw=S.eddies+S.crew*S.crewCost*0.3, i;
   for(i=0;i<6;i++) nw+=S.gear[i]*S.gearCost[i]*0.5;
@@ -654,6 +676,12 @@ function load(){
     if(!Array.isArray(S.crimeCrew)||S.crimeCrew.length!==5) S.crimeCrew=[0,0,0,0,0];
     if(!Array.isArray(S.autoCds)||S.autoCds.length!==5) S.autoCds=[0,0,0,0,0];
     if(!Array.isArray(S.jobLog)) S.jobLog=[];
+    if(typeof S.fixerHires!=='number') S.fixerHires=0;
+    if(typeof S.fixerTimer!=='number') S.fixerTimer=0;
+    if(typeof S.drugType!=='number') S.drugType=0;
+    if(!Array.isArray(S.drugUnlocked)) S.drugUnlocked=[true,false,false];
+    if(typeof S.drugCook!=='number') S.drugCook=0;
+    if(typeof S.drugSell!=='number') S.drugSell=0;
     for(var mi=0;mi<S.members.length;mi++){
       var m=S.members[mi];
       if(typeof m.assignedCrime!=='number') m.assignedCrime=-1;
@@ -979,6 +1007,18 @@ function commitCrime(i,x,y){
     floater(px,py,'FLATLINED!','#ff3131');
     flash('#ff3131');
     blip(140,0.18,'sawtooth',0.05,80);
+    if(S.heat>=C.heatMax&&Math.random()<C.heatDeathPct){
+      var victim=-1;
+      for(var vi=S.members.length-1;vi>=0;vi--) if(S.members[vi].assignedCrime===-1){ victim=vi; break; }
+      if(victim<0&&S.members.length>0) victim=S.members.length-1;
+      if(victim>=0){
+        var vm=S.members[victim];
+        S.members.splice(victim,1);
+        S.crew=Math.max(0,S.crew-1); S.casualties++;
+        floater(px,py,vm.name+' DOWN — PERMANENT','#ff3131');
+        logJob(vm.name+' FLATLINED for good on '+c.name+' — gone at max heat. The streets remember.','#ff3131');
+      }
+    }
   }
   return true;
 }
@@ -1031,6 +1071,37 @@ function buyLabs(i){
   toast(LABS[i].name+' is online. Cook the whole city.','#ff3131');
   blip(180,0.3,'sawtooth',0.05,60);
   return true;
+}
+
+function fixerCost(){ return C.fixerBase*Math.pow(C.fixerInc,S.fixerHires); }
+function fixerActive(){ return S.fixerTimer>0; }
+function hireFixer(){
+  var cost=fixerCost();
+  if(fixerActive()||S.eddies<cost) return false;
+  S.eddies-=cost;
+  S.fixerHires++;
+  S.fixerTimer=C.fixerDuration;
+  logJob('The Fixer is on retainer for '+fmtTime(C.fixerDuration)+'. He’ll grease the NCPD whenever heat maxes out.','#05d9e8');
+  toast('Fixer hired — heat management on autopilot for 6h.','#05d9e8');
+  blip(440,0.12,'sine',0.05,880);
+  return true;
+}
+function fixerTick(dt){
+  if(!fixerActive()) return;
+  S.fixerTimer=Math.max(0,S.fixerTimer-dt);
+  if(S.fixerTimer===0){
+    logJob('The Fixer’s retainer expired. His price just went up.','#ffe600');
+    return;
+  }
+  if(S.heat>=C.heatMax){
+    var cost=bribeCost()*C.fixerBribeMult;
+    if(S.eddies>=cost){
+      S.eddies-=cost;
+      S.heat=0;
+      S.bribes++;
+      logJob('The Fixer greased the NCPD: '+fmt(cost)+' ¢, heat cleared.','#05d9e8');
+    }
+  }
 }
 
 function bribeCost(){ return C.bribeBase*Math.pow(C.bribeInc,S.bribes); }
@@ -1129,9 +1200,10 @@ function autoCrimeTick(dt){
       pay=payout(i)*crewPayMult;
       S.eddies+=pay; S.totalEarned+=pay; S.crimesWon++;
       S.heat=Math.min(C.heatMax,S.heat+c.heat*C.autoHeatMult*C.crimeHeatMult*districtBonusMult().heatGain);
-      logJob('+'+fmt(pay)+' ¢ — '+c.name+' run by '+S.members[worker].name+(active>1?' + '+(active-1)+' more':'')+'.',c.color);
+      // successes not logged — JOBS tab shows failures only for a clean overview
     }else{
       S.heat=Math.min(C.heatMax,S.heat+c.heat*0.5*C.autoHeatMult*C.crimeHeatMult*districtBonusMult().heatGain);
+      if(heatDeathRoll(worker,c.name)) continue;
       var flRisk=Math.min(0.9,(1-sc)*(1+(active-1)*C.autoCrewRisk*10));
       if(Math.random()<flRisk){
         var injTime=C.injuryBase*(1+S.heat*C.injuryHeatScale/100);
@@ -1156,6 +1228,57 @@ function logJob(text,color){
   jobsDirty=true;
 }
 
+function killMember(idx,reason){
+  var m=S.members[idx];
+  if(!m) return false;
+  if(m.assignedCrime>=0){
+    if(S.crimeCrew[m.assignedCrime]>0) S.crimeCrew[m.assignedCrime]--;
+    m.assignedCrime=-1;
+  }
+  S.members.splice(idx,1);
+  S.crew=Math.max(0,S.crew-1);
+  S.casualties++;
+  if(reason) logJob(m.name+' '+reason,'#ff3131');
+  crewDirty=true;
+  return true;
+}
+
+function heatDeathRoll(worker,cname){
+  if(S.heat>=C.heatMax&&Math.random()<C.heatDeathPct){
+    killMember(worker,'FLATLINED for good on '+cname+' — gone at max heat. The streets remember.');
+    return true;
+  }
+  return false;
+}
+
+function drugTick(dt){
+  var owned=0, i;
+  for(i=0;i<2;i++) owned+=S.labs[i]?1:0;
+  if(owned===0) return;
+  var workers=S.drugCook+S.drugSell;
+  if(workers<1) return;
+  var chance=(C.drugBustBase+workers*C.drugBustBase*0.3)*(1+S.heat*C.drugBustHeatScale/100)*dt;
+  if(Math.random()>=chance) return;
+  // BUST: lose the highest lab, workers die, location must be rebought
+  var li=-1;
+  for(i=1;i>=0;i--) if(S.labs[i]){ li=i; break; }
+  if(li<0) return;
+  S.labs[li]=0;
+  S.labCost[li]=LABS[li].cost;
+  var dead=Math.max(1,Math.floor(workers*C.drugBustKill));
+  S.heat=Math.min(C.heatMax,S.heat+25);
+  for(var d=0;d<dead;d++){
+    var victim=-1;
+    for(var vi=S.members.length-1;vi>=0;vi--) if(S.members[vi].assignedCrime===-1&&!(S.members[vi].injury>0)){ victim=vi; break; }
+    if(victim<0) victim=S.members.length-1;
+    if(victim>=0&&S.members.length>0) killMember(victim,null);
+  }
+  S.drugCook=0;
+  S.drugSell=0;
+  logJob('NCPD BUSTED your '+(LABS[li].name)+'! Location lost — rebuy required. '+dead+' crew dead, +25 heat.','#ff3131');
+  toast('NCPD busted the drug lab! Rebuy the location.','#ff3131');
+}
+
 function injuryTick(dt){
   for(var i=0;i<S.members.length;i++){
     var m=S.members[i];
@@ -1178,6 +1301,8 @@ function gameTick(dt){
   S.heat=Math.max(0,S.heat-C.heatDecay*dt*db.heatGain);
   for(var i=0;i<5;i++) if(S.cds[i]>0) S.cds[i]=Math.max(0,S.cds[i]-dt);
   injuryTick(dt);
+  fixerTick(dt);
+  drugTick(dt);
   autoCrimeTick(dt);
   rivalTick(dt);
   var t=tierIndex();
@@ -1191,6 +1316,7 @@ var crewDirty=true;
 var crimeRefs=[], bribeRefs=null;
 var hireBtn=null, hireCost=null, crewGrid=null, crewCountEl=null;
 var gearRefs=[], opsRefs=[], labRefs=[];
+var fixerRefs=null, drugRefs=null;
 var statRefs={};
 
 function buildCrimes(){
@@ -1451,7 +1577,7 @@ function buildOps(){
     var row=el('div','shop-row');
     var info=el('div','shop-info');
     info.appendChild(el('div','shop-name',l.name));
-    info.appendChild(el('div','shop-desc',l.desc+' Income x'+l.mult+'.'));
+    info.appendChild(el('div','shop-desc',l.desc+' Multiplies drug operation income x'+l.mult+' (needs cooks + dealers assigned).'));
     var right=el('div','shop-right');
     var state=el('div','shop-owned');
     var cost=el('div','shop-cost');
@@ -1462,10 +1588,104 @@ function buildOps(){
     labRefs.push({row:row,state:state,cost:cost,btn:btn,req:l.req});
     c.appendChild(row);
   });
+
+  c.appendChild(el('div','section-label','THE FIXER'));
+  var frow=el('div','shop-row');
+  var finfo=el('div','shop-info');
+  finfo.appendChild(el('div','shop-name','Fixer On Retainer'));
+  finfo.appendChild(el('div','shop-desc','Auto-bribes the NCPD with your cash whenever heat hits 100%. Retainer lasts 6 hours — then his price doubles. If cash is short, he waits and pays when you have it.'));
+  var fright=el('div','shop-right');
+  fixerRefs={state:el('div','shop-owned'),cost:el('div','shop-cost'),btn:el('button','btn','HIRE')};
+  fixerRefs.btn.addEventListener('click',function(){ hireFixer(); });
+  fright.appendChild(fixerRefs.state); fright.appendChild(fixerRefs.cost); fright.appendChild(fixerRefs.btn);
+  frow.appendChild(finfo); frow.appendChild(fright);
+  c.appendChild(frow);
+
+  c.appendChild(el('div','section-label','DRUG OPERATION'));
+  c.appendChild(el('div','hint','Assign a cook and a dealer to your labs to start production. More crew on each slot means more product — income scales with the smaller slot. NCPD can bust the operation: you lose the location, the crew on it, and the heat spikes. Requires at least one owned lab.'));
+  drugRefs={};
+  var anyLab=function(){ return (S.labs[0]?1:0)+(S.labs[1]?1:0)>0; };
+  DRUGS.forEach(function(d,i){
+    var drow=el('div','shop-row');
+    var dinfo=el('div','shop-info');
+    dinfo.appendChild(el('div','shop-name',d.name.toUpperCase()+' — x'+d.base+' value'));
+    dinfo.appendChild(el('div','shop-desc',d.desc+(i>0?' Unlock cost: '+fmt(DRUGS[i].cost)+' ¢.':'')));
+    var dright=el('div','shop-right');
+    var dbtn=el('button','btn',S.drugType===i?'PRODUCING':'SELECT');
+    dbtn.addEventListener('click',function(){
+      if(S.drugUnlocked[i]||S.eddies>=DRUGS[i].cost){
+        if(!S.drugUnlocked[i]){ S.eddies-=DRUGS[i].cost; S.drugUnlocked[i]=true; }
+        S.drugType=i;
+        buildOps();
+      }
+    });
+    dright.appendChild(dbtn);
+    drow.appendChild(dinfo); drow.appendChild(dright);
+    c.appendChild(drow);
+  });
+  var slotRow=el('div','shop-row');
+  var slotInfo=el('div','shop-info');
+  slotInfo.appendChild(el('div','shop-name','CREW ASSIGNMENT'));
+  slotInfo.appendChild(el('div','shop-desc','1 cook slot + 1 dealer slot. Production = min(cooks, dealers).'));
+  var slotRight=el('div','shop-right');
+  function slotStepper(label,key){
+    var wrap=el('div',null);
+    wrap.style.cssText='display:flex;align-items:center;gap:6px;margin-right:12px';
+    wrap.appendChild(el('span','assign-label',label));
+    var minus=el('button','btn','−');
+    minus.style.padding='2px 8px';
+    var count=el('span','assign-count','0');
+    var plus=el('button','btn','+');
+    plus.style.padding='2px 8px';
+    minus.addEventListener('click',function(){ if(S[key]>0){ S[key]--; refreshDrugSlots(); } });
+    plus.addEventListener('click',function(){ if(drugFreeCrew()>0){ S[key]++; refreshDrugSlots(); } });
+    wrap.appendChild(minus); wrap.appendChild(count); wrap.appendChild(plus);
+    drugRefs[key]={count:count,minus:minus,plus:plus};
+    return wrap;
+  }
+  slotRight.appendChild(slotStepper('COOKS','drugCook'));
+  slotRight.appendChild(slotStepper('DEALERS','drugSell'));
+  slotRow.appendChild(slotInfo); slotRow.appendChild(slotRight);
+  c.appendChild(slotRow);
+  drugRefs.income=el('div','hint');
+  c.appendChild(drugRefs.income);
+  refreshDrugSlots();
+}
+
+function drugFreeCrew(){
+  return Math.max(0,S.crew-guardedCrew()-crimeAssignedCrew()-S.drugCook-S.drugSell-injuredCrew());
+}
+function refreshDrugSlots(){
+  if(!drugRefs||!drugRefs.drugCook) return;
+  drugRefs.drugCook.count.textContent=String(S.drugCook);
+  drugRefs.drugSell.count.textContent=String(S.drugSell);
+  drugRefs.drugCook.minus.disabled=S.drugCook<=0;
+  drugRefs.drugSell.minus.disabled=S.drugSell<=0;
+  var free=drugFreeCrew();
+  drugRefs.drugCook.plus.disabled=free<=0;
+  drugRefs.drugSell.plus.disabled=free<=0;
+  drugRefs.income.textContent=drugIncome()>0?('Drug income: '+fmt(drugIncome())+' ¢/s'+(drugIncome()>0&&fixerActive()?'':'')):'No drug income — assign at least 1 cook and 1 dealer, and own a lab.';
 }
 
 function updateOps(){
   var i, r;
+  if(fixerRefs){
+    if(fixerActive()){
+      fixerRefs.state.textContent='ON RETAINER — '+fmtTime(S.fixerTimer);
+      fixerRefs.state.style.color='#ffe600';
+      fixerRefs.cost.textContent='—';
+      fixerRefs.btn.disabled=true;
+      fixerRefs.btn.textContent='ACTIVE';
+    }else{
+      var fcost=fixerCost();
+      fixerRefs.state.textContent='AVAILABLE';
+      fixerRefs.state.style.color='#05d9e8';
+      fixerRefs.cost.textContent=fmt(fcost)+' ¢';
+      fixerRefs.btn.disabled=S.eddies<fcost;
+      fixerRefs.btn.textContent='HIRE';
+    }
+  }
+  if(drugRefs&&drugRefs.drugCook) refreshDrugSlots();
   for(i=0;i<4;i++){
     r=opsRefs[i];
     if(S.ops[i]){
@@ -1936,7 +2156,7 @@ function startNewGame(){
   showView('setup');
 }
 
-var VERSION='1.4.0';
+var VERSION='1.5.0';
 
 function init(){
   try{
@@ -2067,6 +2287,15 @@ window.__game={
   logJob:logJob,
   injuredCrew:injuredCrew,
   injuryTick:injuryTick,
+  killMember:killMember,
+  fixerCost:fixerCost,
+  fixerActive:fixerActive,
+  hireFixer:hireFixer,
+  fixerTick:fixerTick,
+  drugIncome:drugIncome,
+  drugTick:drugTick,
+  drugFreeCrew:drugFreeCrew,
+  DRUGS:DRUGS,
   assignedMembers:assignedMembers,
   autoCrimeTick:autoCrimeTick,
   buildCrimes:buildCrimes,

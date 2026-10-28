@@ -25,10 +25,13 @@ Add that line to `~/.config/lxsession/LXDE-pi/autostart` to launch on boot.
 - **Core loop**: commit crimes (pickpocket → mugging → robbery → heist → net heist), earn eddies, recruit crew, buy gear. Floating `+N ¢` on every score.
 - **Gang identity**: name your gang, pick one of 12 procedurally-drawn neon emblems and a signature color. Shows in the HUD, member cards, event popups, and territory map.
 - **Progression ladder** (5 tiers): Solo Hustler → Small Crew (3) → Established Gang (10) → Syndicate (30) → Cartel (80). Each tier jump fires a narrative banner + city visual upgrade.
-- **Shop** (13 items): Crew (repeatable ×1.215), Gear (6 items, repeatable ×1.30), Operations (4 fronts + 2 drug labs, one-time income multipliers).
+- **Shop**: Crew (repeatable ×1.215), Gear (6 items, repeatable ×1.30 — gear bonuses apply multiplicatively, so +150% means exactly +150%), Operations (4 one-time income-multiplier fronts).
 - **Heat system**: crimes add heat (a little slower than before); above 20% the corrupt CPD taxes every score; above 75% jobs fail more often. Heat decays over time, or pay bribes to clear it.
 - **Auto-crew jobs**: assign crew to crimes to run them automatically. More crew on a job means more pay per score (+15% each), but bigger crews draw more fire when things go wrong. Flatlined soldiers are injured — out of action for at least 1 hour (longer at high heat) and back on passive duty once recovered.
-- **JOBS tab**: auto-crime results stream into a dedicated tab on the right, rendered only while you're watching it — zero visual load otherwise.
+- **JOBS tab**: failures only (flatlines, injuries, deaths, busts) stream into a dedicated right-side tab, rendered only while you're watching it — a clean overview when you come back.
+- **Max heat kills**: at 100% heat every failed job has a 5% chance to permanently kill a crew member.
+- **The Fixer**: hireable on retainer (price doubles each hire). He auto-bribes the NCPD with your cash whenever heat maxes out — if you're short, he waits until you can cover it. Retainer lasts 6 hours.
+- **Drug operation**: 3 drug types (Synth-Coke, Black Lace, Zenith) with cook + dealer crew slots. Production scales with the smaller slot; more crew = more income. NCPD busts destroy the lab (rebuy required), kill the crew on it and spike heat.
 - **Rival gangs**: 3 AI rivals (Maelstrom, Voodoo Boys, Sixth Street) contest your districts in the background. Fully non-blocking — results arrive as dismissible toasts + a scrolling event log.
 - **Territory map**: 6 Night City districts. Hold one for a passive bonus (+10% income, +8% success, −15% heat gain, +15% payout, ×1.5 mult, ×1.25 lab mult). Assign guards to defend; attack rival districts to claim them.
 - **Prestige**: "Vanish and rebuild with a new identity" at 5B ¢ net worth — resets your empire for a permanent Street Legend ×1.5 income multiplier that stacks.
