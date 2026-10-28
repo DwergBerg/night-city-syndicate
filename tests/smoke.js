@@ -173,7 +173,7 @@ var tax=G.taxPct();
 assert(tax>0,'heat tax at 60: '+tax.toFixed(3));
 assert(Math.abs(tax-0.08)<0.001,'tax = (60-20)*0.002 = 0.08');
 // payout reduced by tax
-var rawPay=G.CRIMES[0].base*(1+s.crew*G.C.crewPayout+G.state().gear.reduce(function(acc,_,i){return acc+G.state().gear[i]*G.GEAR[i].inc;},0));
+var rawPay=G.CRIMES[0].base*(1+s.crew*G.C.crewPayout)*(1+G.state().gear.reduce(function(acc,_,i){return acc+G.state().gear[i]*G.GEAR[i].inc;},0));
 assert(Math.abs(G.payout(0)-rawPay*(1-tax))<0.01,'payout reduced by tax: '+G.payout(0)+' vs '+(rawPay*(1-tax)));
 
 // success chance scaling
