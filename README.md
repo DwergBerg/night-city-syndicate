@@ -27,7 +27,7 @@ Add that line to `~/.config/lxsession/LXDE-pi/autostart` to launch on boot.
 - **Progression ladder** (5 tiers): Solo Hustler → Small Crew (3) → Established Gang (10) → Syndicate (30) → Cartel (80). Each tier jump fires a narrative banner + city visual upgrade.
 - **Shop** (13 items): Crew (repeatable ×1.215), Gear (6 items, repeatable ×1.30), Operations (4 fronts + 2 drug labs, one-time income multipliers).
 - **Heat system**: crimes add heat (a little slower than before); above 20% the corrupt CPD taxes every score; above 75% jobs fail more often. Heat decays over time, or pay bribes to clear it.
-- **Auto-crew jobs**: assign crew to crimes to run them automatically. More crew on a job means more pay per score (+15% each), but bigger crews draw more fire when things go wrong. Flatlined soldiers are injured and pulled off the job back into the passive income pool.
+- **Auto-crew jobs**: assign crew to crimes to run them automatically. More crew on a job means more pay per score (+15% each), but bigger crews draw more fire when things go wrong. Flatlined soldiers are injured — out of action for at least 1 hour (longer at high heat) and back on passive duty once recovered.
 - **JOBS tab**: auto-crime results stream into a dedicated tab on the right, rendered only while you're watching it — zero visual load otherwise.
 - **Rival gangs**: 3 AI rivals (Maelstrom, Voodoo Boys, Sixth Street) contest your districts in the background. Fully non-blocking — results arrive as dismissible toasts + a scrolling event log.
 - **Territory map**: 6 Night City districts. Hold one for a passive bonus (+10% income, +8% success, −15% heat gain, +15% payout, ×1.5 mult, ×1.25 lab mult). Assign guards to defend; attack rival districts to claim them.
