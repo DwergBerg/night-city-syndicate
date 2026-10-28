@@ -17,8 +17,6 @@ body{
   -webkit-user-select:none; user-select:none;
   -webkit-tap-highlight-color:transparent;
 }
-#city{position:fixed;inset:0;z-index:0}
-#rain{position:fixed;inset:0;z-index:1;pointer-events:none}
 .scan{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:.5;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0px,rgba(0,0,0,.22) 1px,transparent 1px,transparent 3px)}
 .vignette{position:fixed;inset:0;z-index:41;pointer-events:none;
@@ -26,14 +24,6 @@ body{
 #flash{position:fixed;inset:0;z-index:45;pointer-events:none;opacity:0}
 #flash.go{animation:flashA .28s ease-out}
 @keyframes flashA{0%{opacity:.4}100%{opacity:0}}
-#city.glitch{animation:cityGlitch .5s steps(4)}
-@keyframes cityGlitch{
-  0%{transform:translate(0);opacity:1}
-  25%{transform:translate(-5px,2px);opacity:.85}
-  50%{transform:translate(5px,-3px);opacity:1}
-  75%{transform:translate(-3px,-2px);opacity:.9}
-  100%{transform:none;opacity:1}
-}
 #hud{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:20px;
   padding:7px 14px;background:rgba(6,7,16,.92);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .hud-item{display:flex;flex-direction:column;gap:1px}
@@ -51,14 +41,28 @@ body{
 .hud-btn{background:transparent;border:1px solid #2a3055;color:var(--dim);font:inherit;font-size:10px;
   letter-spacing:1px;padding:4px 9px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .hud-btn:hover{color:var(--cyan);border-color:var(--cyan)}
-#panel{position:fixed;top:48px;right:0;bottom:0;width:400px;z-index:30;background:var(--panel);
-  border-left:1px solid var(--line);display:flex;flex-direction:column}
+#main{position:fixed;top:48px;left:0;right:0;bottom:0;z-index:30;display:grid;
+  grid-template-columns:340px 340px 1fr;gap:0;background:var(--panel)}
+.col{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--line)}
+.col:last-child{border-right:none}
+.col-head{flex:none;padding:10px 12px;border-bottom:1px solid var(--line);font-size:11px;
+  letter-spacing:3px;color:var(--pink);font-weight:bold}
+.col-body{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:#2a3055 transparent}
 #tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
 .tab{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--faint);
   font:inherit;font-size:11px;letter-spacing:1px;padding:10px 4px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .tab:hover{color:var(--dim)}
 .tab.active{color:var(--cyan);border-bottom-color:var(--cyan);text-shadow:0 0 10px rgba(5,217,232,.6)}
 #tabContent{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:#2a3055 transparent}
+.assign-row{display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.assign-label{font-size:9px;letter-spacing:1px;color:var(--faint);flex:1}
+.assign-count{font-size:11px;font-weight:bold;color:var(--yellow);min-width:34px;text-align:center}
+.assign-note{font-size:9px;color:var(--faint)}
+.jail-note{font-size:9px;color:#ff6b6b}
+.member-card.jailed{opacity:.55}
+.member-card.jailed .portrait{filter:grayscale(1) brightness(.5)}
+.member-jail{font-size:8px;color:#ff6b6b;font-weight:bold;letter-spacing:1px}
+.member-task{font-size:8px;color:var(--cyan);letter-spacing:1px}
 .hint{font-size:11px;color:var(--faint);margin-bottom:10px;line-height:1.55}
 .section-label{font-size:10px;letter-spacing:3px;color:var(--pink);margin:12px 0 6px;font-weight:bold}
 .shop-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(15,17,34,.7);
@@ -192,8 +196,15 @@ body{
 .stepper button{width:26px;height:26px;background:rgba(5,217,232,.08);border:1px solid var(--cyan);color:var(--cyan);font:inherit;font-size:14px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .stepper button:disabled{opacity:.3;cursor:default}
 .stepper .g-count{min-width:30px;text-align:center;font-weight:bold;color:#ffe600}
+@media(max-width:1100px){
+  #main{grid-template-columns:300px 300px 1fr}
+}
+@media(max-width:900px){
+  #main{grid-template-columns:1fr;grid-template-rows:1fr 1fr 1fr;overflow-y:auto}
+  .col{border-right:none;border-bottom:1px solid var(--line);min-height:280px}
+  .col:last-child{border-bottom:none}
+}
 @media(max-width:760px){
-  #panel{top:auto;left:0;right:0;bottom:0;width:auto;height:47vh;border-left:none;border-top:1px solid var(--line)}
   #hud{gap:12px;padding:6px 8px}
   .hud-value{font-size:13px}
   #hEddies{font-size:15px}
@@ -208,8 +219,6 @@ body{
 </style>
 </head>
 <body>
-<canvas id="city"></canvas>
-<canvas id="rain"></canvas>
 <div class="scan"></div>
 <div class="vignette"></div>
 <div id="flash"></div>
@@ -230,17 +239,25 @@ body{
   </div>
 </header>
 
-<aside id="panel">
-  <nav id="tabs">
-    <button class="tab active" data-tab="crimes">CRIMES</button>
-    <button class="tab" data-tab="crew">CREW</button>
-    <button class="tab" data-tab="gear">GEAR</button>
-    <button class="tab" data-tab="ops">OPS</button>
-    <button class="tab" data-tab="districts">DISTRICTS</button>
-    <button class="tab" data-tab="stats">STATS</button>
-  </nav>
-  <div id="tabContent"></div>
-</aside>
+<main id="main">
+  <section class="col" id="crimeCol">
+    <div class="col-head">CRIMES</div>
+    <div class="col-body" id="crimePanel"></div>
+  </section>
+  <section class="col" id="upgradeCol">
+    <div class="col-head">UPGRADES</div>
+    <div class="col-body" id="upgradePanel"></div>
+  </section>
+  <section class="col" id="tabCol">
+    <nav id="tabs">
+      <button class="tab" data-tab="crew">CREW</button>
+      <button class="tab" data-tab="ops">BUSINESSES</button>
+      <button class="tab" data-tab="districts">DISTRICTS</button>
+      <button class="tab" data-tab="stats">STATS</button>
+    </nav>
+    <div id="tabContent"></div>
+  </section>
+</main>
 
 <div id="toasts"></div>
 <div id="eventLog" style="display:none"></div>
@@ -251,7 +268,7 @@ body{
   <div class="intro-box start-box" id="startBox">
     <h1 data-text="NIGHT CITY SYNDICATE">NIGHT CITY SYNDICATE</h1>
     <p class="start-sub">A cyberpunk crime empire simulator</p>
-    <p class="start-ver">v1.2.0</p>
+    <p class="start-ver">v1.3.0</p>
     <div class="start-btns">
       <button id="btnContinue" class="big-btn">CONTINUE</button>
       <button id="btnNewGame" class="big-btn">NEW GAME</button>
@@ -312,7 +329,8 @@ var C={
   contestInterval:[240,420],
   attackHeat:12, attackCrewCost:0.10,
   guardIncomeLoss:1.0,
-  offlineIncomeMult:0.30, offlineHeatDecayMult:3.0, offlineContestChance:0.5
+  offlineIncomeMult:0.30, offlineHeatDecayMult:3.0, offlineContestChance:0.5,
+  autoHeatMult:0.5, jailBase:30, jailHeatScale:0.5
 };
 
 var CRIMES=[
@@ -496,6 +514,7 @@ function freshState(){
   return {
     eddies:100, crew:0, crewCost:C.crewBase, heat:0, bribes:0,
     cds:[0,0,0,0,0],
+    crimeCrew:[0,0,0,0,0], autoCds:[0,0,0,0,0],
     gear:[0,0,0,0,0,0], gearCost:GEAR.map(function(g){return g.cost;}),
     ops:[0,0,0,0], opCost:OPS.map(function(o){return o.cost;}),
     labs:[0,0], labCost:LABS.map(function(l){return l.cost;}),
@@ -541,7 +560,17 @@ function guardedCrew(){
   for(i=0;i<S.districts.length;i++) if(S.districts[i]) g+=S.districts[i].guards||0;
   return g;
 }
-function activeCrew(){ return Math.max(0,S.crew-guardedCrew()); }
+function crimeAssignedCrew(){
+  var n=0, i;
+  for(i=0;i<5;i++) n+=S.crimeCrew[i]||0;
+  return n;
+}
+function jailedCrew(){
+  var n=0, i;
+  for(i=0;i<S.members.length;i++) if(S.members[i].jail>0) n++;
+  return n;
+}
+function activeCrew(){ return Math.max(0,S.crew-guardedCrew()-crimeAssignedCrew()-jailedCrew()); }
 function ips(){ return activeCrew()*C.crewIncome*(1+activeCrew()*C.crewSyn)*incomeMult(); }
 function taxPct(){ return S.heat>C.heatTaxAt ? Math.min(0.9,(S.heat-C.heatTaxAt)*C.heatTaxPct) : 0; }
 function succChance(i){
@@ -616,6 +645,23 @@ function load(){
     if(!Array.isArray(S.eventLog)) S.eventLog=[];
     if(typeof S.rivalTimer!=='number') S.rivalTimer=180+Math.random()*120;
     if(typeof S.casualties!=='number') S.casualties=0;
+    if(!Array.isArray(S.crimeCrew)||S.crimeCrew.length!==5) S.crimeCrew=[0,0,0,0,0];
+    if(!Array.isArray(S.autoCds)||S.autoCds.length!==5) S.autoCds=[0,0,0,0,0];
+    for(var mi=0;mi<S.members.length;mi++){
+      var m=S.members[mi];
+      if(typeof m.jail!=='number') m.jail=0;
+      if(typeof m.assignedCrime!=='number') m.assignedCrime=-1;
+    }
+    var totalAssigned=0, ci;
+    for(ci=0;ci<5;ci++) totalAssigned+=S.crimeCrew[ci];
+    var assignedCount=0;
+    for(mi=0;mi<S.members.length;mi++) if(S.members[mi].assignedCrime>=0) assignedCount++;
+    if(assignedCount>totalAssigned){
+      var excess=assignedCount-totalAssigned;
+      for(mi=S.members.length-1;mi>=0&&excess>0;mi--){
+        if(S.members[mi].assignedCrime>=0){ S.members[mi].assignedCrime=-1; excess--; }
+      }
+    }
     return true;
   }catch(e){ return false; }
 }
@@ -739,25 +785,6 @@ function flash(color){
   f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
 }
 
-var shakeT=0;
-function shake(){ shakeT=0.3; }
-
-var parts=[];
-function spawnParts(x,y,color,n){
-  for(var i=0;i<n;i++){
-    if(parts.length>=150) parts.shift();
-    var a=Math.random()*Math.PI*2, sp=40+Math.random()*170;
-    parts.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-50,life:0.45+Math.random()*0.5,color:color});
-  }
-}
-function updateParts(dt){
-  for(var i=parts.length-1;i>=0;i--){
-    var p=parts[i];
-    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=140*dt; p.life-=dt;
-    if(p.life<=0) parts.splice(i,1);
-  }
-}
-
 function toast(text,color){
   var t=el('div','toast');
   t.textContent=text;
@@ -798,7 +825,26 @@ function applyCasualties(n){
   var lost=Math.min(n,S.crew);
   S.crew-=lost;
   S.casualties+=lost;
-  while(S.members.length>S.crew&&S.members.length>0) S.members.pop();
+  for(var ci=0;ci<5;ci++) if(S.crimeCrew[ci]>0){
+    var assigned=assignedMembers(ci);
+    if(assigned.length>S.crimeCrew[ci]){
+      S.crimeCrew[ci]=assigned.length;
+    }
+  }
+  var removed=0;
+  while(S.members.length>S.crew&&S.members.length>0){
+    var m=S.members.pop();
+    if(m&&m.assignedCrime>=0&&S.crimeCrew[m.assignedCrime]>0) S.crimeCrew[m.assignedCrime]--;
+    removed++;
+  }
+  var totalAssigned=crimeAssignedCrew();
+  for(var ci2=0;ci2<5;ci2++){
+    var assigned2=assignedMembers(ci2);
+    while(assigned2.length>S.crimeCrew[ci2]){
+      var idx=assigned2.pop();
+      if(idx!==undefined) S.members[idx].assignedCrime=-1;
+    }
+  }
   var totalGuards=guardedCrew();
   if(totalGuards>S.crew){
     var scale=S.crew/Math.max(1,totalGuards);
@@ -808,7 +854,7 @@ function applyCasualties(n){
       }
     }
   }
-  renderCrew();
+  crewDirty=true;
   return lost;
 }
 
@@ -894,11 +940,6 @@ function attackOdds(di){
   return Math.min(0.95,Math.max(0.05,atk/(atk+def)));
 }
 
-function cityGlitch(){
-  var cv=$('city');
-  cv.classList.remove('glitch'); void cv.offsetWidth; cv.classList.add('glitch');
-}
-
 function tierUp(t){
   var T=TIERS[t];
   var b=$('tierBanner');
@@ -910,8 +951,6 @@ function tierUp(t){
   b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
   toast(T.line,T.color);
   blip(220,0.7,'sawtooth',0.06,880);
-  cityGlitch();
-  buildSkyline();
 }
 
 function commitCrime(i,x,y){
@@ -927,14 +966,11 @@ function commitCrime(i,x,y){
     S.eddies+=pay; S.totalEarned+=pay; S.crimesWon++;
     S.heat=Math.min(C.heatMax,S.heat+c.heat*districtBonusMult().heatGain);
     floater(px,py,'+'+fmt(pay)+' ¢',c.color);
-    spawnParts(px,py,c.color,8);
     flash(c.color);
-    shake();
     blip(660,0.08,'square',0.05,990);
   }else{
     S.heat=Math.min(C.heatMax,S.heat+c.heat*0.5*districtBonusMult().heatGain);
-    floater(px,py,'BUSTED!','#ff3131');
-    spawnParts(px,py,'#ff3131',5);
+    floater(px,py,'FLATLINED!','#ff3131');
     flash('#ff3131');
     blip(140,0.18,'sawtooth',0.05,80);
   }
@@ -950,10 +986,10 @@ function hire(){
   var role=ROLES[Math.floor(r()*ROLES.length)];
   var nick=FIRST[Math.floor(r()*FIRST.length)].slice(0,3);
   var name=FIRST[Math.floor(r()*FIRST.length)]+' "'+nick+'" '+LAST[Math.floor(r()*LAST.length)];
-  S.members.push({name:name,role:role.name,color:role.color});
+  S.members.push({name:name,role:role.name,color:role.color,jail:0,assignedCrime:-1});
   if(S.members.length>300) S.members.shift();
   blip(330,0.07,'triangle',0.04);
-  renderCrew();
+  crewDirty=true;
   return true;
 }
 
@@ -974,9 +1010,8 @@ function buyOps(i){
   S.eddies-=S.opCost[i];
   S.ops[i]=1;
   S.opCost[i]*=OPS[i].inc;
-  toast(OPS[i].name+' is yours. The skyline just got a little brighter.','#05d9e8');
+  toast(OPS[i].name+' is yours. The rackets run smoother.','#05d9e8');
   blip(440,0.12,'sine',0.05,880);
-  buildSkyline();
   return true;
 }
 
@@ -989,7 +1024,6 @@ function buyLabs(i){
   S.labCost[i]*=LABS[i].inc;
   toast(LABS[i].name+' is online. Cook the whole city.','#ff3131');
   blip(180,0.3,'sawtooth',0.05,60);
-  buildSkyline();
   return true;
 }
 
@@ -1010,14 +1044,14 @@ function doPrestige(){
   S.prestiges++;
   S.eddies=0; S.crew=0; S.crewCost=C.crewBase; S.heat=0; S.bribes=0;
   S.cds=[0,0,0,0,0];
+  S.crimeCrew=[0,0,0,0,0]; S.autoCds=[0,0,0,0,0];
   S.gear=[0,0,0,0,0,0]; S.gearCost=GEAR.map(function(g){return g.cost;});
   S.ops=[0,0,0,0]; S.opCost=OPS.map(function(o){return o.cost;});
   S.labs=[0,0]; S.labCost=LABS.map(function(l){return l.cost;});
   S.members=[]; S.lastTier=0; S.casualties=0;
   S.districts.forEach(function(d){ d.guards=0; d.contested=0; });
   toast('New identity. New face. The legend grows.','#b967ff');
-  renderCrew();
-  buildSkyline();
+  crewDirty=true;
   save();
   return true;
 }
@@ -1029,6 +1063,94 @@ function hardReset(){
   location.reload();
 }
 
+function assignedMembers(ci){
+  var out=[];
+  for(var i=0;i<S.members.length;i++){
+    if(S.members[i].assignedCrime===ci) out.push(i);
+  }
+  return out;
+}
+
+function findAvailableMember(){
+  for(var i=0;i<S.members.length;i++){
+    var m=S.members[i];
+    if(!m.jail&&m.assignedCrime===-1) return i;
+  }
+  return -1;
+}
+
+function assignCrewToCrime(ci,delta){
+  var c=CRIMES[ci];
+  if(S.crew<c.req) return false;
+  var target=S.crimeCrew[ci]+delta;
+  if(target<0) return false;
+  var maxAssign=Math.max(0,S.crew-guardedCrew());
+  var totalAssigned=crimeAssignedCrew();
+  if(delta>0){
+    var room=maxAssign-totalAssigned;
+    if(room<=0) return false;
+    if(delta>room) target=S.crimeCrew[ci]+room;
+  }
+  S.crimeCrew[ci]=target;
+  while(assignedMembers(ci).length>S.crimeCrew[ci]){
+    var idx=assignedMembers(ci).pop();
+    if(idx!==undefined) S.members[idx].assignedCrime=-1;
+  }
+  while(assignedMembers(ci).length<S.crimeCrew[ci]){
+    var mi=findAvailableMember();
+    if(mi<0) break;
+    S.members[mi].assignedCrime=ci;
+    S.members[mi].jail=0;
+  }
+  return true;
+}
+
+function autoCrimeTick(dt){
+  var i, c, pay;
+  for(i=0;i<5;i++){
+    var assigned=assignedMembers(i);
+    var jailed=0;
+    for(var j=0;j<assigned.length;j++) if(S.members[assigned[j]].jail>0) jailed++;
+    var active=assigned.length-jailed;
+    for(var k=0;k<assigned.length;k++){
+      var m=S.members[assigned[k]];
+      if(m.jail>0){
+        m.jail=Math.max(0,m.jail-dt);
+        if(m.jail===0){
+          toast(m.name+' is out of jail and back on '+CRIMES[i].name+'.','#ffe600');
+          logEvent(m.name+' released from jail, resuming '+CRIMES[i].name+'.','#ffe600');
+        }
+      }
+    }
+    if(active<=0) continue;
+    if(S.cds[i]>0) continue;
+    c=CRIMES[i];
+    if(S.crew<c.req) continue;
+    S.cds[i]=c.cd;
+    S.autoCds[i]=(S.autoCds[i]||0)+1;
+    S.crimesDone++;
+    var worker=assigned[Math.floor(Math.random()*active)];
+    if(Math.random()<succChance(i)){
+      pay=payout(i);
+      S.eddies+=pay; S.totalEarned+=pay; S.crimesWon++;
+      S.heat=Math.min(C.heatMax,S.heat+c.heat*C.autoHeatMult*districtBonusMult().heatGain);
+      floater(window.innerWidth*0.25,window.innerHeight*0.5,'+'+fmt(pay)+' ¢',c.color);
+      flash(c.color);
+      blip(660,0.08,'square',0.05,990);
+      logEvent(CRIMES[i].name+' (auto): +'+fmt(pay)+' ¢ by '+S.members[worker].name+'.',c.color);
+    }else{
+      S.heat=Math.min(C.heatMax,S.heat+c.heat*0.5*C.autoHeatMult*districtBonusMult().heatGain);
+      floater(window.innerWidth*0.25,window.innerHeight*0.5,'FLATLINED!','#ff3131');
+      flash('#ff3131');
+      blip(140,0.18,'sawtooth',0.05,80);
+      var jailTime=C.jailBase*(1+S.heat*C.jailHeatScale/100);
+      S.members[worker].jail=jailTime;
+      logEvent(S.members[worker].name+' FLATLINED on '+CRIMES[i].name+' — jailed for '+fmtTime(jailTime)+'.','#ff3131');
+      toast(S.members[worker].name+' flatlined on '+CRIMES[i].name+'! Jailed '+fmtTime(jailTime)+'.','#ff3131');
+    }
+  }
+}
+
 function gameTick(dt){
   S.playTime+=dt;
   var db=districtBonusMult();
@@ -1037,310 +1159,24 @@ function gameTick(dt){
   S.totalEarned+=inc*dt;
   S.heat=Math.max(0,S.heat-C.heatDecay*dt*db.heatGain);
   for(var i=0;i<5;i++) if(S.cds[i]>0) S.cds[i]=Math.max(0,S.cds[i]-dt);
+  autoCrimeTick(dt);
   rivalTick(dt);
   var t=tierIndex();
   if(t>S.lastTier){ S.lastTier=t; tierUp(t); }
 }
 
-var cityCv=$('city'), ctx=cityCv.getContext('2d');
-var rainCv=$('rain'), rctx=rainCv.getContext('2d');
-var DPR=Math.min(window.devicePixelRatio||1,1.5);
-var W=0,H=0;
-var staticCv=null,litCv=null,extraCv0=null,extraCv1=null;
-var towers=[],fronts=[],beacons=[],signs=[];
-var extraSeen=[0,0];
-var drops=[];
-
-function makeSignSprite(text,color){
-  var w=Math.round(text.length*9+18), h=22;
-  var c=document.createElement('canvas');
-  c.width=Math.max(2,Math.round(w*DPR)); c.height=Math.max(2,Math.round(h*DPR));
-  var c2=c.getContext('2d');
-  c2.setTransform(DPR,0,0,DPR,0,0);
-  c2.fillStyle='rgba(5,6,15,0.88)';
-  c2.fillRect(0,0,w,h);
-  c2.strokeStyle=color; c2.lineWidth=1;
-  c2.strokeRect(0.5,0.5,w-1,h-1);
-  c2.shadowColor=color; c2.shadowBlur=9;
-  c2.fillStyle=color;
-  c2.font='bold 11px monospace';
-  c2.textAlign='center'; c2.textBaseline='middle';
-  c2.fillText(text,w/2,h/2+1);
-  c2.shadowBlur=0;
-  return {cv:c,w:w,h:h};
-}
-
-function drawLayer(sctx,lctx,r,x1,hMin,hMax,color,record){
-  var x=-24;
-  while(x<x1){
-    var w=42+r()*84;
-    var h=hMin+r()*(hMax-hMin);
-    var y=H-h;
-    sctx.fillStyle=color;
-    sctx.fillRect(x,y,w,h);
-    sctx.fillStyle='rgba(0,0,0,0.45)';
-    sctx.fillRect(x,y,w,3);
-    var cols=Math.max(2,Math.floor(w/15)), rows=Math.max(2,Math.floor(h/22)), i, j;
-    for(i=0;i<cols;i++) for(j=0;j<rows;j++){
-      var wx=x+7+i*15, wy=y+9+j*22, ww=6, wh=9;
-      sctx.fillStyle=r()<0.08?'rgba(255,220,130,0.28)':'rgba(120,140,200,0.05)';
-      sctx.fillRect(wx,wy,ww,wh);
-      if(lctx){ lctx.fillStyle='rgb(255,214,120)'; lctx.fillRect(wx,wy,ww,wh); }
-    }
-    if(r()<0.3){
-      var ax=x+w*r(), al=10+r()*20;
-      sctx.strokeStyle='#1a1f38'; sctx.lineWidth=1.5;
-      sctx.beginPath(); sctx.moveTo(ax,y); sctx.lineTo(ax,y-al); sctx.stroke();
-      beacons.push({x:ax,y:y-al});
-    }
-    if(record) fronts.push({x:x,y:y,w:w,h:h});
-    x+=w+2+r()*10;
-  }
-}
-
-function drawTowerBase(sctx,x,baseY,w,h,color){
-  sctx.fillStyle='#0a0c1a';
-  sctx.fillRect(x,baseY-h,w,h);
-  sctx.strokeStyle=color; sctx.globalAlpha=0.3; sctx.lineWidth=1.5;
-  sctx.strokeRect(x+0.5,baseY-h+0.5,w-1,h-1);
-  sctx.globalAlpha=1;
-  sctx.fillStyle='#0a0c1a';
-  sctx.fillRect(x+w/2-1.5,baseY-h-16,3,16);
-}
-
-function towerLitCanvas(t){
-  var c=document.createElement('canvas');
-  c.width=cityCv.width; c.height=cityCv.height;
-  var c2=c.getContext('2d');
-  c2.setTransform(DPR,0,0,DPR,0,0);
-  var cols=4, ww=(t.w-16)/cols, i, j;
-  c2.fillStyle=t.color;
-  for(i=0;i<cols;i++) for(j=0;j<t.floors;j++){
-    c2.fillRect(t.x+8+i*ww, t.baseY-12-(j+1)*16, ww-4, 9);
-  }
-  return c;
-}
-
-function drawExtraLab(ectx){
-  var x=W*0.44, w=110, h=46, y=H-h;
-  ectx.fillStyle='#070912'; ectx.fillRect(x,y,w,h);
-  ectx.fillStyle='#0a0d18';
-  ectx.fillRect(x+14,y-26,10,26);
-  ectx.fillRect(x+w-30,y-36,10,36);
-  ectx.strokeStyle='#ff3131'; ectx.globalAlpha=0.55; ectx.lineWidth=1.5;
-  ectx.strokeRect(x+0.5,y+0.5,w-1,h-1);
-  ectx.globalAlpha=1;
-  ectx.fillStyle='rgba(255,49,49,0.8)';
-  ectx.fillRect(x+w/2-2,y-46,4,10);
-}
-
-function drawExtraFactory(ectx){
-  var x=W*0.14, w=150, h=82, y=H-h, i;
-  ectx.fillStyle='#070912'; ectx.fillRect(x,y,w,h);
-  ectx.fillStyle='#0a0d18';
-  for(i=0;i<5;i++) ectx.fillRect(x+12+i*28,y-14,12,14);
-  ectx.strokeStyle='#05d9e8'; ectx.globalAlpha=0.45; ectx.lineWidth=1.5;
-  ectx.strokeRect(x+0.5,y+0.5,w-1,h-1);
-  ectx.globalAlpha=1;
-  ectx.fillStyle='rgba(5,217,232,0.8)';
-  ectx.fillRect(x+w/2-2,y-24,4,10);
-}
-
-function buildSkyline(){
-  W=window.innerWidth; H=window.innerHeight;
-  cityCv.width=Math.max(2,Math.round(W*DPR));
-  cityCv.height=Math.max(2,Math.round(H*DPR));
-  cityCv.style.width=W+'px'; cityCv.style.height=H+'px';
-  rainCv.width=W; rainCv.height=H;
-  var r=rng(S.seed);
-  var i;
-
-  staticCv=document.createElement('canvas');
-  staticCv.width=cityCv.width; staticCv.height=cityCv.height;
-  var sctx=staticCv.getContext('2d');
-  sctx.setTransform(DPR,0,0,DPR,0,0);
-
-  var grd=sctx.createLinearGradient(0,0,0,H);
-  grd.addColorStop(0,'#0c0722');
-  grd.addColorStop(0.55,'#070512');
-  grd.addColorStop(1,'#04030c');
-  sctx.fillStyle=grd;
-  sctx.fillRect(0,0,W,H);
-
-  for(i=0;i<70;i++){
-    sctx.fillStyle='rgba(180,200,255,'+(0.08+r()*0.3).toFixed(2)+')';
-    sctx.fillRect(r()*W,r()*H*0.5,1.2,1.2);
-  }
-
-  sctx.shadowColor='rgba(200,220,255,0.7)'; sctx.shadowBlur=26;
-  sctx.fillStyle='#dfe6f5';
-  sctx.beginPath(); sctx.arc(W*0.15,H*0.17,30,0,7); sctx.fill();
-  sctx.shadowBlur=0;
-  sctx.fillStyle='#c3cbe0';
-  sctx.beginPath(); sctx.arc(W*0.15-9,H*0.17-6,6,0,7); sctx.fill();
-  sctx.beginPath(); sctx.arc(W*0.15+10,H*0.17+8,4,0,7); sctx.fill();
-
-  litCv=document.createElement('canvas');
-  litCv.width=cityCv.width; litCv.height=cityCv.height;
-  var lctx=litCv.getContext('2d');
-  lctx.setTransform(DPR,0,0,DPR,0,0);
-
-  towers=[]; fronts=[]; beacons=[];
-  drawLayer(sctx,lctx,r,W,H*0.55,H*0.88,'#0d1126',false);
-  drawLayer(sctx,lctx,r,W*0.8,H*0.4,H*0.72,'#0a0e20',false);
-
-  var tx=W*0.34;
-  var tdefs=[{w:80,h:H*0.6,color:'#ff2a6d'},{w:96,h:H*0.74,color:'#05d9e8'},{w:70,h:H*0.5,color:'#ffe600'}];
-  for(i=0;i<3;i++){
-    var td=tdefs[i];
-    var x=tx+i*(td.w+16);
-    drawTowerBase(sctx,x,H,td.w,td.h,td.color);
-    var t={x:x,baseY:H,w:td.w,h:td.h,floors:Math.max(4,Math.floor(td.h/16)),color:td.color};
-    t.litCv=towerLitCanvas(t);
-    towers.push(t);
-  }
-
-  drawLayer(sctx,null,r,W,H*0.18,H*0.46,'#05060f',true);
-
-  extraCv0=document.createElement('canvas');
-  extraCv0.width=cityCv.width; extraCv0.height=cityCv.height;
-  var e0=extraCv0.getContext('2d'); e0.setTransform(DPR,0,0,DPR,0,0);
-  drawExtraLab(e0);
-
-  extraCv1=document.createElement('canvas');
-  extraCv1.width=cityCv.width; extraCv1.height=cityCv.height;
-  var e1=extraCv1.getContext('2d'); e1.setTransform(DPR,0,0,DPR,0,0);
-  drawExtraFactory(e1);
-
-  signs=[
-    {text:'NOODLES', color:'#ffe600', sprite:makeSignSprite('NOODLES','#ffe600'), when:function(){return true;}},
-    {text:'RAKETS', color:'#ff2a6d', sprite:makeSignSprite('RAKETS','#ff2a6d'), when:function(){return S.ops[0]>0;}},
-    {text:'CHOP SHOP', color:'#05d9e8', sprite:makeSignSprite('CHOP SHOP','#05d9e8'), when:function(){return S.ops[1]>0;}},
-    {text:'LAUNDRO 24H', color:'#ffe600', sprite:makeSignSprite('LAUNDRO 24H','#ffe600'), when:function(){return S.ops[2]>0;}},
-    {text:'NEON DINER', color:'#ff2a6d', sprite:makeSignSprite('NEON DINER','#ff2a6d'), when:function(){return S.ops[3]>0;}},
-    {text:'LAB', color:'#ff3131', sprite:makeSignSprite('LAB','#ff3131'), when:function(){return S.labs[0]>0;}},
-    {text:'SYNTH', color:'#05d9e8', sprite:makeSignSprite('SYNTH','#05d9e8'), when:function(){return S.labs[1]>0;}}
-  ];
-}
-
-function initRain(){
-  drops=[];
-  for(var i=0;i<70;i++){
-    drops.push({x:Math.random()*W,y:Math.random()*H,len:8+Math.random()*14,sp:300+Math.random()*420});
-  }
-}
-
-function updateRain(dt){
-  rctx.clearRect(0,0,W,H);
-  rctx.strokeStyle='rgba(140,190,255,0.13)';
-  rctx.lineWidth=1;
-  rctx.beginPath();
-  for(var i=0;i<drops.length;i++){
-    var d=drops[i];
-    d.y+=d.sp*dt; d.x+=d.sp*0.15*dt;
-    if(d.y>H+24){ d.y=-24; d.x=Math.random()*W; }
-    rctx.moveTo(d.x,d.y);
-    rctx.lineTo(d.x-d.len*0.15,d.y-d.len);
-  }
-  rctx.stroke();
-}
-
-function towerLit(){
-  var total=0, i;
-  for(i=0;i<towers.length;i++) total+=towers[i].floors;
-  var litTotal=Math.round(Math.min(1,S.crew/150)*total);
-  var out=[], acc=0;
-  for(i=0;i<towers.length;i++){
-    var n=Math.max(0,Math.min(towers[i].floors,litTotal-acc));
-    acc+=n; out.push(n);
-  }
-  return out;
-}
-
 var perf=0;
-function renderCity(dt){
-  ctx.drawImage(staticCv,0,0,W,H);
-  ctx.globalAlpha=0.06+tierIndex()*0.1;
-  ctx.drawImage(litCv,0,0,W,H);
-  ctx.globalAlpha=1;
 
-  var ea0=0, ea1=0;
-  if(S.labs[0]>0){
-    if(!extraSeen[0]) extraSeen[0]=perf;
-    ea0=Math.min(1,(perf-extraSeen[0])/800);
-  }
-  if(S.labs[1]>0){
-    if(!extraSeen[1]) extraSeen[1]=perf;
-    ea1=Math.min(1,(perf-extraSeen[1])/800);
-  }
-  if(ea0>0){ ctx.globalAlpha=ea0; ctx.drawImage(extraCv0,0,0,W,H); }
-  if(ea1>0){ ctx.globalAlpha=ea1; ctx.drawImage(extraCv1,0,0,W,H); }
-  ctx.globalAlpha=1;
-
-  var lit=towerLit();
-  var i;
-  for(i=0;i<towers.length;i++){
-    var t=towers[i];
-    if(lit[i]>0){
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(t.x-2,t.baseY-lit[i]*16,t.w+4,lit[i]*16+2);
-      ctx.clip();
-      ctx.globalAlpha=0.9;
-      ctx.drawImage(t.litCv,0,0,W,H);
-      ctx.restore();
-      ctx.globalAlpha=1;
-    }
-    var on=((perf*0.002+i)%1.6)<0.15;
-    ctx.fillStyle=on?t.color:'rgba(120,130,180,0.25)';
-    ctx.beginPath(); ctx.arc(t.x+t.w/2,t.baseY-t.h-21,2.4,0,7); ctx.fill();
-  }
-
-  for(i=0;i<signs.length;i++){
-    var sg=signs[i];
-    if(!sg.when()) continue;
-    var a=fronts[i%fronts.length];
-    if(!a) continue;
-    var x=a.x+a.w/2-sg.sprite.w/2, y=a.y-sg.sprite.h-6;
-    ctx.globalAlpha=0.78+0.22*Math.sin(perf*0.005+i*1.9);
-    ctx.drawImage(sg.sprite.cv,x,y,sg.sprite.w,sg.sprite.h);
-  }
-  ctx.globalAlpha=1;
-
-  for(i=0;i<beacons.length;i++){
-    var b=beacons[i];
-    var onb=((perf*0.001+i*0.53)%1.5)<0.12;
-    ctx.fillStyle=onb?'rgba(255,70,70,0.95)':'rgba(255,70,70,0.12)';
-    ctx.beginPath(); ctx.arc(b.x,b.y,2,0,7); ctx.fill();
-  }
-
-  for(i=0;i<parts.length;i++){
-    var p=parts[i];
-    ctx.globalAlpha=Math.max(0,Math.min(1,p.life*2));
-    ctx.fillStyle=p.color;
-    ctx.fillRect(p.x-1,p.y-1,2.5,2.5);
-  }
-  ctx.globalAlpha=1;
-
-  if(shakeT>0){
-    shakeT-=dt;
-    var m=5*(shakeT/0.3);
-    cityCv.style.transform='translate('+((Math.random()*2-1)*m).toFixed(1)+'px,'+((Math.random()*2-1)*m).toFixed(1)+'px)';
-  }else if(cityCv.style.transform){
-    cityCv.style.transform='';
-  }
-}
-
-var activeTab='crimes';
+var activeTab='crew';
+var crewDirty=true;
 var crimeRefs=[], bribeRefs=null;
 var hireBtn=null, hireCost=null, crewGrid=null, crewCountEl=null;
 var gearRefs=[], opsRefs=[], labRefs=[];
 var statRefs={};
 
 function buildCrimes(){
-  var c=$('tabContent');
+  var c=$('crimePanel');
   c.innerHTML='';
-  activeTab='crimes';
   c.appendChild(el('div','hint','Heat above 20% taxes every score — the corrupt CPD wants their cut. Above 75%, jobs start going sideways. Heat fades on its own, or grease the right palms to clear it.'));
   crimeRefs=[];
   CRIMES.forEach(function(crime,i){
@@ -1367,9 +1203,30 @@ function buildCrimes(){
       commitCrime(i,r.left+r.width/2,r.top);
     });
     card.appendChild(btn);
+    var arow=el('div','assign-row');
+    arow.appendChild(el('span','assign-label','AUTO-CREW'));
+    var minus=el('button','btn','−');
+    minus.style.padding='2px 8px';
+    var acount=el('span','assign-count','0');
+    var plus=el('button','btn','+');
+    plus.style.padding='2px 8px';
+    var anote=el('span','assign-note','idle · ½ heat');
+    function refreshAssign(){
+      var assigned=assignedMembers(i);
+      var jailed=0;
+      for(var j=0;j<assigned.length;j++) if(S.members[assigned[j]].jail>0) jailed++;
+      acount.textContent=S.crimeCrew[i]+(jailed>0?' ('+jailed+' jail)':'');
+      minus.disabled=S.crimeCrew[i]<=0;
+      var maxAssign=Math.max(0,S.crew-guardedCrew());
+      plus.disabled=crimeAssignedCrew()>=maxAssign;
+    }
+    minus.addEventListener('click',function(){ if(assignCrewToCrime(i,-1)){ refreshAssign(); crewDirty=true; } });
+    plus.addEventListener('click',function(){ if(assignCrewToCrime(i,1)){ refreshAssign(); crewDirty=true; } });
+    arow.appendChild(minus); arow.appendChild(acount); arow.appendChild(plus); arow.appendChild(anote);
+    card.appendChild(arow);
     var lock=el('div','lock-note');
     card.appendChild(lock);
-    crimeRefs.push({card:card,pay:pay,sc:sc,fill:fill,btn:btn,lock:lock});
+    crimeRefs.push({card:card,pay:pay,sc:sc,fill:fill,btn:btn,lock:lock,refreshAssign:refreshAssign,acount:acount});
     c.appendChild(card);
   });
   var brow=el('div','shop-row');
@@ -1385,11 +1242,14 @@ function buildCrimes(){
   brow.appendChild(binfo); brow.appendChild(bright);
   c.appendChild(brow);
   bribeRefs={cost:bcost,btn:bbtn};
+  updateCrimes();
 }
 
 function updateCrimes(){
+  if(!crimeRefs||crimeRefs.length===0) return;
   for(var i=0;i<5;i++){
     var r=crimeRefs[i], c=CRIMES[i];
+    if(!r) continue;
     var unlocked=S.crew>=c.req;
     r.card.classList.toggle('locked',!unlocked);
     if(!unlocked){
@@ -1408,6 +1268,7 @@ function updateCrimes(){
       r.pay.textContent=fmt(payout(i))+' ¢';
       r.sc.textContent=Math.round(succChance(i)*100)+'% success';
     }
+    if(r.refreshAssign) r.refreshAssign();
   }
   if(bribeRefs){
     var cost=bribeCost();
@@ -1441,10 +1302,10 @@ function drawPortrait(cv,m){
   c2.fillRect(0,27,44,1);
 }
 
-function buildCrew(){
-  var c=$('tabContent');
+function buildUpgrades(){
+  var c=$('upgradePanel');
   c.innerHTML='';
-  activeTab='crew';
+  c.appendChild(el('div','section-label','CREW'));
   var top=el('div','shop-row');
   top.style.borderColor='rgba(255,42,109,.5)';
   var info=el('div','shop-info');
@@ -1458,21 +1319,51 @@ function buildCrew(){
   right.appendChild(hireCost); right.appendChild(hireBtn);
   top.appendChild(right);
   c.appendChild(top);
+  c.appendChild(el('div','section-label','GEAR'));
+  c.appendChild(el('div','hint','Gear stacks — every unit adds income and success. Each unit costs x1.30 more than the last.'));
+  gearRefs=[];
+  GEAR.forEach(function(g,i){
+    var row=el('div','shop-row');
+    var info2=el('div','shop-info');
+    info2.appendChild(el('div','shop-name',g.name));
+    info2.appendChild(el('div','shop-desc',g.desc));
+    var right2=el('div','shop-right');
+    var owned=el('div','shop-owned','x0');
+    var cost=el('div','shop-cost');
+    var btn=el('button','btn','BUY');
+    btn.addEventListener('click',function(){ buyGear(i); });
+    right2.appendChild(owned); right2.appendChild(cost); right2.appendChild(btn);
+    row.appendChild(info2); row.appendChild(right2);
+    gearRefs.push({owned:owned,cost:cost,btn:btn});
+    c.appendChild(row);
+  });
+  updateGear();
+  if(hireBtn&&hireCost){
+    hireCost.textContent=fmt(S.crewCost)+' ¢';
+    hireBtn.disabled=S.eddies<S.crewCost;
+  }
+}
+
+function buildCrew(){
+  var c=$('tabContent');
+  c.innerHTML='';
+  activeTab='crew';
   crewCountEl=el('div','hint');
   c.appendChild(crewCountEl);
   crewGrid=el('div','crew-grid');
   c.appendChild(crewGrid);
-  renderCrew();
+  crewDirty=true;
 }
 
 function renderCrew(){
-  if(activeTab!=='crew'||!crewGrid) return;
+  if(!crewGrid) return;
   crewGrid.innerHTML='';
   var shown=Math.min(S.members.length,12), i;
   for(i=0;i<shown;i++){
     var m=S.members[i];
     var card=el('div','member-card');
     card.style.borderColor=(S.gang&&S.gang.color)||m.color;
+    if(m.jail>0) card.classList.add('jailed');
     var cv=el('canvas','portrait');
     cv.width=44; cv.height=44;
     drawPortrait(cv,m);
@@ -1481,6 +1372,11 @@ function renderCrew(){
     var rl=el('div','member-role',m.role.toUpperCase());
     rl.style.color=m.color;
     card.appendChild(rl);
+    if(m.jail>0){
+      card.appendChild(el('div','member-jail','JAIL '+fmtTime(m.jail)));
+    }else if(m.assignedCrime>=0){
+      card.appendChild(el('div','member-task','ON '+CRIMES[m.assignedCrime].name.toUpperCase()));
+    }
     crewGrid.appendChild(card);
   }
   if(S.members.length>shown){
@@ -1489,37 +1385,20 @@ function renderCrew(){
   if(S.members.length===0){
     crewGrid.appendChild(el('div','member-more','Nobody works for you yet. Hire your first soldier.'));
   }
-  crewCountEl.textContent=S.crew+' soldier'+(S.crew===1?'':'s')+' on the payroll — each adds passive income and nerve';
-  hireCost.textContent=fmt(S.crewCost)+' ¢';
-  hireBtn.disabled=S.eddies<S.crewCost;
-}
-
-function buildGear(){
-  var c=$('tabContent');
-  c.innerHTML='';
-  activeTab='gear';
-  c.appendChild(el('div','hint','Gear stacks — every unit adds income and success. Each unit costs x1.30 more than the last.'));
-  gearRefs=[];
-  GEAR.forEach(function(g,i){
-    var row=el('div','shop-row');
-    var info=el('div','shop-info');
-    info.appendChild(el('div','shop-name',g.name));
-    info.appendChild(el('div','shop-desc',g.desc));
-    var right=el('div','shop-right');
-    var owned=el('div','shop-owned','x0');
-    var cost=el('div','shop-cost');
-    var btn=el('button','btn','BUY');
-    btn.addEventListener('click',function(){ buyGear(i); });
-    right.appendChild(owned); right.appendChild(cost); right.appendChild(btn);
-    row.appendChild(info); row.appendChild(right);
-    gearRefs.push({owned:owned,cost:cost,btn:btn});
-    c.appendChild(row);
-  });
+  if(crewCountEl){
+    crewCountEl.textContent=S.crew+' soldier'+(S.crew===1?'':'s')+' — '+activeCrew()+' earning, '+crimeAssignedCrew()+' on jobs, '+jailedCrew()+' jailed, '+guardedCrew()+' guarding';
+  }
+  if(hireBtn&&hireCost){
+    hireCost.textContent=fmt(S.crewCost)+' ¢';
+    hireBtn.disabled=S.eddies<S.crewCost;
+  }
 }
 
 function updateGear(){
+  if(!gearRefs||gearRefs.length===0) return;
   for(var i=0;i<6;i++){
     var r=gearRefs[i];
+    if(!r) continue;
     r.owned.textContent='x'+S.gear[i];
     r.cost.textContent=fmt(S.gearCost[i])+' ¢';
     r.btn.disabled=S.eddies<S.gearCost[i];
@@ -1853,9 +1732,7 @@ function switchTab(name){
   for(var i=0;i<tabBtns.length;i++){
     tabBtns[i].classList.toggle('active',tabBtns[i].getAttribute('data-tab')===name);
   }
-  if(name==='crimes') buildCrimes();
-  else if(name==='crew') buildCrew();
-  else if(name==='gear') buildGear();
+  if(name==='crew') buildCrew();
   else if(name==='ops') buildOps();
   else if(name==='districts') buildDistricts();
   else if(name==='stats') buildStats();
@@ -1911,18 +1788,18 @@ function frame(now){
   lastFrame=now;
   perf=now;
   try{ gameTick(dt); }catch(e){ if(window.__errCount===undefined)window.__errCount=0; window.__errCount++; if(window.__errCount<5) console.error('gameTick error:',e.message); }
-  try{ updateParts(dt); }catch(e){}
-  try{ renderCity(dt); }catch(e){}
-  try{ updateRain(dt); }catch(e){}
   try{ updateHUD(); }catch(e){}
   try{ updateCrimes(); }catch(e){}
-  if(activeTab==='gear'){ try{ updateGear(); }catch(e){} }
-  else if(activeTab==='ops'){ try{ updateOps(); }catch(e){} }
+  try{ updateGear(); }catch(e){}
+  try{
+    if(hireBtn&&hireCost){
+      hireCost.textContent=fmt(S.crewCost)+' ¢';
+      hireBtn.disabled=S.eddies<S.crewCost;
+    }
+  }catch(e){}
+  if(activeTab==='ops'){ try{ updateOps(); }catch(e){} }
   else if(activeTab==='districts'){ try{ updateDistricts(); }catch(e){} }
-  else if(activeTab==='crew'&&hireBtn){
-    hireCost.textContent=fmt(S.crewCost)+' ¢';
-    hireBtn.disabled=S.eddies<S.crewCost;
-  }
+  else if(activeTab==='crew'&&crewDirty){ crewDirty=false; try{ renderCrew(); }catch(e){} }
   statsAcc+=dt;
   if(statsAcc>0.25){ statsAcc=0; if(activeTab==='stats'){ try{ updateStats(); }catch(e){} } }
   saveAcc+=dt;
@@ -2012,21 +1889,19 @@ function startNewGame(){
   showView('setup');
 }
 
-var VERSION='1.2.0';
+var VERSION='1.3.0';
 
 function init(){
   try{
   hadSave=load();
   saveHasGang=!!(hadSave&&S.gang&&S.gang.name);
   if(saveHasGang){
-    if(S.labs[0]>0) extraSeen[0]=-1e9;
-    if(S.labs[1]>0) extraSeen[1]=-1e9;
     applyOffline();
   }
-  buildSkyline();
-  initRain();
   buildCrimes();
+  buildUpgrades();
   wireTabs();
+  switchTab('crew');
   $('btnSound').textContent='SOUND '+(S.sound?'ON':'OFF');
   $('btnSound').addEventListener('click',function(){
     S.sound=!S.sound;
@@ -2091,10 +1966,7 @@ function init(){
   $('importFile').addEventListener('change',function(ev){
     if(ev.target.files&&ev.target.files[0]) importSave(ev.target.files[0]);
   });
-  window.addEventListener('resize',function(){
-    clearTimeout(init._rt);
-    init._rt=setTimeout(function(){ buildSkyline(); initRain(); },200);
-  });
+  window.addEventListener('resize',function(){});
   window.addEventListener('beforeunload',save);
   if(document.addEventListener) document.addEventListener('touchend',function(e){
     var t=e.target;
@@ -2143,6 +2015,15 @@ window.__game={
   districtBonusMult:districtBonusMult,
   guardedCrew:guardedCrew,
   activeCrew:activeCrew,
+  crimeAssignedCrew:crimeAssignedCrew,
+  jailedCrew:jailedCrew,
+  assignCrewToCrime:assignCrewToCrime,
+  assignedMembers:assignedMembers,
+  autoCrimeTick:autoCrimeTick,
+  buildCrimes:buildCrimes,
+  buildUpgrades:buildUpgrades,
+  buildCrew:buildCrew,
+  renderCrew:renderCrew,
   rivalStrength:rivalStrength,
   netWorth:netWorth,
   ips:ips,

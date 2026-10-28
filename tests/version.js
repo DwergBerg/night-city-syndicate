@@ -15,11 +15,11 @@ var G=window.__game;
 function assert(c,m){if(!c){console.log('FAIL:',m);process.exit(1);}console.log('ok -',m);}
 
 // Test 1: VERSION constant in JS
-assert(G.VERSION==='1.2.0','VERSION exported as 1.2.0, got: '+G.VERSION);
-assert(src.indexOf("var VERSION='1.2.0'")>=0,'VERSION constant defined in source');
+assert(G.VERSION==='1.3.0','VERSION exported as 1.3.0, got: '+G.VERSION);
+assert(src.indexOf("var VERSION='1.3.0'")>=0,'VERSION constant defined in source');
 
 // Test 2: version string in HTML start screen
-assert(html.indexOf('v1.2.0')>=0,'version string "v1.2.0" present in HTML');
+assert(html.indexOf('v1.3.0')>=0,'version string "v1.3.0" present in HTML');
 assert(html.indexOf('class="start-ver"')>=0,'start-ver CSS class present in HTML');
 
 // Test 3: CSS for start-ver
@@ -33,7 +33,8 @@ assert(src.indexOf('try{')>=0&&src.indexOf('}catch(e){')>=0,'try/catch present i
 // Test 5: frame loop has per-section error isolation
 assert(src.indexOf("try{ gameTick(dt); }catch(e)")>=0,'gameTick wrapped in try/catch');
 assert(src.indexOf("try{ updateHUD(); }catch(e)")>=0,'updateHUD wrapped in try/catch');
-assert(src.indexOf("try{ renderCity(dt); }catch(e)")>=0,'renderCity wrapped in try/catch');
+assert(src.indexOf("try{ updateCrimes(); }catch(e)")>=0,'updateCrimes wrapped in try/catch');
+assert(src.indexOf("try{ updateGear(); }catch(e)")>=0,'updateGear wrapped in try/catch');
 
 // Test 6: touchend handler uses closest('button') and .click()
 assert(src.indexOf("t.closest('button')")>=0,'touchend uses closest(button)');
@@ -47,5 +48,28 @@ assert(html.indexOf('touch-action:manipulation')>=0,'touch-action:manipulation p
 
 // Test 9: #gangName has user-select:text
 assert(html.indexOf('#gangName{')>=0&&html.indexOf('-webkit-user-select:text;user-select:text')>=0,'gangName has user-select:text');
+
+// Test 10: city background removed
+assert(html.indexOf('id="city"')<0,'no #city canvas in HTML');
+assert(html.indexOf('id="rain"')<0,'no #rain canvas in HTML');
+assert(src.indexOf('buildSkyline')<0,'no buildSkyline in JS');
+assert(src.indexOf('renderCity')<0,'no renderCity in JS');
+assert(src.indexOf('updateRain')<0,'no updateRain in JS');
+assert(src.indexOf('initRain')<0,'no initRain in JS');
+
+// Test 11: 3-column layout
+assert(html.indexOf('id="main"')>=0,'#main 3-column container present');
+assert(html.indexOf('id="crimePanel"')>=0,'#crimePanel (left column) present');
+assert(html.indexOf('id="upgradePanel"')>=0,'#upgradePanel (middle column) present');
+assert(html.indexOf('id="tabContent"')>=0,'#tabContent (right column) present');
+assert(html.indexOf('grid-template-columns:340px 340px 1fr')>=0,'3-column grid CSS present');
+
+// Test 12: BUSINESSES tab label
+assert(html.indexOf('>BUSINESSES</button>')>=0,'BUSINESSES tab label present');
+assert(html.indexOf('>OPS</button>')<0,'old OPS tab label removed');
+
+// Test 13: FLATLINED instead of BUSTED
+assert(src.indexOf("'FLATLINED!'")>=0,'FLATLINED! text present in JS');
+assert(src.indexOf("'BUSTED!'")<0,'old BUSTED! text removed from JS');
 
 console.log('\nVERSION & ROBUSTNESS ALL TESTS PASSED');
