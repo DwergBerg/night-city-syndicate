@@ -15,11 +15,11 @@ var G=window.__game;
 function assert(c,m){if(!c){console.log('FAIL:',m);process.exit(1);}console.log('ok -',m);}
 
 // Test 1: VERSION constant in JS
-assert(G.VERSION==='1.3.0','VERSION exported as 1.3.0, got: '+G.VERSION);
-assert(src.indexOf("var VERSION='1.3.0'")>=0,'VERSION constant defined in source');
+assert(G.VERSION==='1.4.0','VERSION exported as 1.4.0, got: '+G.VERSION);
+assert(src.indexOf("var VERSION='1.4.0'")>=0,'VERSION constant defined in source');
 
 // Test 2: version string in HTML start screen
-assert(html.indexOf('v1.3.0')>=0,'version string "v1.3.0" present in HTML');
+assert(html.indexOf('v1.4.0')>=0,'version string "v1.4.0" present in HTML');
 assert(html.indexOf('class="start-ver"')>=0,'start-ver CSS class present in HTML');
 
 // Test 3: CSS for start-ver

@@ -117,10 +117,14 @@ if(atk.win) assert(s.districts[2].owner==='player','won district is player-owned
 var atkOwn=G.attackDistrict(0);
 assert(atkOwn.ok===false&&atkOwn.reason==='already yours','cannot attack own district');
 
-// can't attack unclaimed
+// unclaimed districts are claimable (fresh game turf grab)
 s.districts[3].owner=null;
+s.crew=20;
+var oddsNull=G.attackOdds(3);
+assert(oddsNull>0&&oddsNull<=0.95,'attack odds shown for unclaimed district: '+oddsNull.toFixed(2));
 var atkNull=G.attackDistrict(3);
-assert(atkNull.ok===false,'cannot attack unclaimed district');
+assert(atkNull.ok===true,'can attack/claim unclaimed district');
+assert(s.districts[3].owner==='player','unclaimed district becomes player-owned on win: '+s.districts[3].owner);
 
 // --- rivalTick fires contests over time, never blocks ---
 s.districts[0].owner='player'; s.districts[0].guards=10;
